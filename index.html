@@ -12,6 +12,14 @@
         --primary: 204 100% 43%;
         --radius: 12px;
       }
+      @keyframes bubble {
+        0% { transform: scale(1); opacity: 0.2; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .animate-bubble {
+        animation: bubble 1.8s ease-in-out forwards;
+      }
     </style>
   </head>
   <body class="bg-gradient-to-b from-blue-100 to-white text-gray-900 font-sans">
@@ -29,75 +37,49 @@
       </div>
     </header>
 
-    <!-- Hero Section -->
+    <!-- Main Title -->
     <main id="home" class="max-w-6xl mx-auto px-4 py-12">
-      <div class="flex flex-col md:flex-row items-center justify-between">
-        <div class="max-w-xl">
-          <h2 class="text-4xl font-bold mb-4">Waddle into the World of Pudgy Penguins</h2>
-          <p class="text-lg mb-6 text-blue-900">
-            Stay updated with the latest news, insights, and developments from the Pudgy Penguins ecosystem and the broader NFT space.
-          </p>
-        </div>
-        <img src="https://em-content.zobj.net/thumbs/120/apple/354/penguin_1f427.png" alt="Penguin" class="w-40 h-40 rounded-full border-4 border-blue-200" />
+      <div class="w-full text-center mt-10 mb-16">
+        <h1 class="text-5xl font-extrabold text-blue-700 animate-bubble">🐧 PenguCoin</h1>
       </div>
 
-      <!-- Category Filter -->
-      <div class="mt-8 flex flex-wrap gap-3">
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">All</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">Pudgy News</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">Pudgy Business</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">NFT Culture</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">Market Analysis</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">NFT Art</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">Guides</span>
-        <span class="bg-gray-100 text-sm px-3 py-1 rounded-full">Crypto</span>
-      </div>
-
-      <!-- Featured Article -->
-      <section id="articles" class="mt-10">
-        <h3 class="text-2xl font-bold mb-4">Featured Article</h3>
-        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition">
-          <h4 class="text-xl font-semibold mb-2">Why Pudgy Penguins Are Taking Over Web3 🐧</h4>
-          <p class="text-gray-700 mb-4">
-            Pudgy Penguins started as a meme project but have grown into one of the most community-driven NFT ecosystems. Here's why...
-          </p>
-          <a href="#" class="text-blue-600 hover:underline font-medium">Read more →</a>
-        </div>
-      </section>
-
-      <!-- More Articles -->
-      <section class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <!-- Articles Section -->
+      <section id="articles" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
-          <h4 class="font-semibold mb-2">Top 5 NFT Projects in 2025</h4>
-          <p class="text-sm text-gray-600">A quick breakdown of the most promising NFT ecosystems this year.</p>
+          <h4 class="font-semibold mb-2">
+            <a href="https://pudgypenguins.com/" target="_blank" class="text-blue-600 hover:underline">
+              Pudgy Penguins Official Site
+            </a>
+          </h4>
+          <p class="text-sm text-gray-600">This is the official website for the Pudgy Penguins NFT project. Explore the real collection, team, and roadmap.</p>
         </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
-          <h4 class="font-semibold mb-2">How to Store NFTs Securely</h4>
-          <p class="text-sm text-gray-600">Your guide to safe wallets and cold storage strategies.</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
-          <h4 class="font-semibold mb-2">The Rise of Web3 Culture</h4>
-          <p class="text-sm text-gray-600">From memes to millions, how NFT communities are reshaping online identity.</p>
-        </div>
-      </section>
 
-      <!-- About Us -->
-      <section id="about" class="mt-16">
-        <h3 class="text-2xl font-bold mb-4">About Us</h3>
-        <p class="text-gray-700 max-w-3xl">
-          PudgyPenguin.com is an independent fan and resource site for the Pudgy Penguins NFT community. We're not officially affiliated — just big fans of chubby Web3 birds. Our goal is to make NFT culture more accessible, fun, and community-driven.
-        </p>
-      </section>
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">
+            <a href="https://shop.pudgypenguins.com/" target="_blank" class="text-blue-600 hover:underline">
+              Pudgy Penguins Official Store
+            </a>
+          </h4>
+          <p class="text-sm text-gray-600">The official online store for Pudgy Penguins merchandise. Buy plushies, apparel, and more from the verified source.</p>
+        </div>
 
-      <!-- Contact -->
-      <section id="contact" class="mt-16">
-        <h3 class="text-2xl font-bold mb-4">Contact Us</h3>
-        <form class="max-w-xl space-y-4">
-          <input type="text" placeholder="Your Name" class="w-full px-4 py-2 border border-gray-300 rounded" required />
-          <input type="email" placeholder="Your Email" class="w-full px-4 py-2 border border-gray-300 rounded" required />
-          <textarea placeholder="Your Message" class="w-full px-4 py-2 border border-gray-300 rounded" rows="5" required></textarea>
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Send Message</button>
-        </form>
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">
+            <a href="https://osl.com/academy/article/what-are-pudgy-penguins-pengu" target="_blank" class="text-blue-600 hover:underline">
+              What Are Pudgy Penguins?
+            </a>
+          </h4>
+          <p class="text-sm text-gray-600">A beginner-friendly article from OSL Academy that explains the origins, purpose, and growth of the Pudgy Penguins NFT collection.</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">
+            <a href="https://ca-lab.isca.org.sg/technicalities/pudgy-penguins-versus-dogecoin/" target="_blank" class="text-blue-600 hover:underline">
+              Pudgy Penguins vs Dogecoin
+            </a>
+          </h4>
+          <p class="text-sm text-gray-600">An analytical comparison between Pudgy Penguins NFTs and Dogecoin from a financial and technical lens by ISCA’s CA Lab.</p>
+        </div>
       </section>
     </main>
 
@@ -107,6 +89,7 @@
     </footer>
   </body>
 </html>
+
 
 
 
