@@ -1,28 +1,47 @@
-import type { Config } from "tailwindcss"
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PudgyPenguin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 47.4% 11.2%;
+        --primary: 204 100% 43%;
+        --radius: 12px;
+      }
+    </style>
+  </head>
+  <body class="bg-white text-gray-900 font-sans">
+    <header class="bg-blue-600 text-white p-6 shadow-md">
+      <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold">PudgyPenguin</h1>
+        <nav class="space-x-4">
+          <a href="#" class="hover:underline">Home</a>
+          <a href="#" class="hover:underline">Blog</a>
+          <a href="#" class="hover:underline">Tools</a>
+          <a href="#" class="hover:underline">Contact</a>
+        </nav>
+      </div>
+    </header>
 
-const config: Config = {
-  darkMode: ["class"],
-  content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
-    "*.{js,ts,jsx,tsx,mdx}",
-  ],
-  prefix: "",
-  theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
-    extend: {
-      colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))
+    <main class="max-w-3xl mx-auto p-8 text-center">
+      <h2 class="text-4xl font-bold mb-4">Welcome to PudgyPenguin!</h2>
+      <p class="text-lg mb-6">
+        Your unofficial NFT news, tools, and Web3 explorer zone. (Not affiliated with the Pudgy Penguins NFT project.)
+      </p>
+      <a href="#"
+         class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+        Explore the Blog
+      </a>
+    </main>
+
+    <footer class="text-center text-sm text-gray-500 mt-16 mb-8">
+      © 2025 PudgyPenguin. Not affiliated with Pudgy Penguins NFT. All rights reserved.
+    </footer>
+  </body>
+</html>
+
 
