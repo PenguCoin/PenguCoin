@@ -118,12 +118,21 @@ window.addEventListener('scroll', () => {
     <header class="bg-white shadow sticky top-0 z-50">
       <div class="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center flex-wrap">
         <h1 class="text-2xl font-bold text-blue-800">🐧 Pudgy Penguins</h1>
-        <nav class="space-x-6 font-medium">
-          <a href="#home" class="hover:text-blue-600">Home</a>
-          <a href="#articles" class="hover:text-blue-600">Articles</a>
-          <a href="#about" class="hover:text-blue-600">About</a>
-          <a href="#contact" class="hover:text-blue-600">Contact</a>
-        </nav>
+        <div class="relative md:hidden">
+  <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">☰ Menu</button>
+  <div id="mobileMenu" class="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded hidden z-50 transition-all duration-300">
+    <a href="#home" class="block px-4 py-2 hover:bg-gray-100">Home</a>
+    <a href="#articles" class="block px-4 py-2 hover:bg-gray-100">Articles</a>
+    <a href="#about" class="block px-4 py-2 hover:bg-gray-100">About</a>
+    <a href="#contact" class="block px-4 py-2 hover:bg-gray-100">Contact</a>
+  </div>
+</div>
+<nav class="space-x-6 font-medium hidden md:flex">
+  <a href="#home" class="hover:text-blue-600">Home</a>
+  <a href="#articles" class="hover:text-blue-600">Articles</a>
+  <a href="#about" class="hover:text-blue-600">About</a>
+  <a href="#contact" class="hover:text-blue-600">Contact</a>
+</nav>
         <div class="flex items-center gap-3 mt-3 md:mt-0">
           <button onclick="toggleDarkMode()" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">🌓 Toggle</button>
           <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-all duration-200">Connect Wallet</button>
@@ -192,7 +201,6 @@ window.addEventListener('scroll', () => {
 <footer class="text-center text-sm text-gray-500 mt-20 mb-8">
   © 2025 PudgyPenguin. Not affiliated with Pudgy Penguins NFT. All rights reserved.
 </footer>
-
 
 
 
