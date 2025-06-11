@@ -15,21 +15,22 @@
     </style>
   </head>
   <body class="bg-gradient-to-b from-blue-100 to-white text-gray-900 font-sans">
+    <!-- Header -->
     <header class="bg-white shadow">
       <div class="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
         <h1 class="text-2xl font-bold text-blue-800">🐧 Pudgy Penguins</h1>
         <nav class="space-x-6 font-medium">
-          <a href="#" class="hover:text-blue-600">Home</a>
-          <a href="#" class="hover:text-blue-600">Articles</a>
-          <a href="#" class="hover:text-blue-600">NFT Gallery</a>
-          <a href="#" class="hover:text-blue-600">About</a>
-          <a href="#" class="hover:text-blue-600">Community</a>
+          <a href="#home" class="hover:text-blue-600">Home</a>
+          <a href="#articles" class="hover:text-blue-600">Articles</a>
+          <a href="#about" class="hover:text-blue-600">About</a>
+          <a href="#contact" class="hover:text-blue-600">Contact</a>
         </nav>
         <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Connect Wallet</button>
       </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-12">
+    <!-- Hero Section -->
+    <main id="home" class="max-w-6xl mx-auto px-4 py-12">
       <div class="flex flex-col md:flex-row items-center justify-between">
         <div class="max-w-xl">
           <h2 class="text-4xl font-bold mb-4">Waddle into the World of Pudgy Penguins</h2>
@@ -53,9 +54,59 @@
       </div>
 
       <!-- Featured Article -->
-      <section class="mt-10">
+      <section id="articles" class="mt-10">
         <h3 class="text-2xl font-bold mb-4">Featured Article</h3>
         <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition">
-          <h4 class="text-xl font-semibold mb-2">Why Pudgy Penguins Are Taki
+          <h4 class="text-xl font-semibold mb-2">Why Pudgy Penguins Are Taking Over Web3 🐧</h4>
+          <p class="text-gray-700 mb-4">
+            Pudgy Penguins started as a meme project but have grown into one of the most community-driven NFT ecosystems. Here's why...
+          </p>
+          <a href="#" class="text-blue-600 hover:underline font-medium">Read more →</a>
+        </div>
+      </section>
+
+      <!-- More Articles -->
+      <section class="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">Top 5 NFT Projects in 2025</h4>
+          <p class="text-sm text-gray-600">A quick breakdown of the most promising NFT ecosystems this year.</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">How to Store NFTs Securely</h4>
+          <p class="text-sm text-gray-600">Your guide to safe wallets and cold storage strategies.</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+          <h4 class="font-semibold mb-2">The Rise of Web3 Culture</h4>
+          <p class="text-sm text-gray-600">From memes to millions, how NFT communities are reshaping online identity.</p>
+        </div>
+      </section>
+
+      <!-- About Us -->
+      <section id="about" class="mt-16">
+        <h3 class="text-2xl font-bold mb-4">About Us</h3>
+        <p class="text-gray-700 max-w-3xl">
+          PudgyPenguin.com is an independent fan and resource site for the Pudgy Penguins NFT community. We're not officially affiliated — just big fans of chubby Web3 birds. Our goal is to make NFT culture more accessible, fun, and community-driven.
+        </p>
+      </section>
+
+      <!-- Contact -->
+      <section id="contact" class="mt-16">
+        <h3 class="text-2xl font-bold mb-4">Contact Us</h3>
+        <form class="max-w-xl space-y-4">
+          <input type="text" placeholder="Your Name" class="w-full px-4 py-2 border border-gray-300 rounded" required />
+          <input type="email" placeholder="Your Email" class="w-full px-4 py-2 border border-gray-300 rounded" required />
+          <textarea placeholder="Your Message" class="w-full px-4 py-2 border border-gray-300 rounded" rows="5" required></textarea>
+          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Send Message</button>
+        </form>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-sm text-gray-500 mt-20 mb-8">
+      © 2025 PudgyPenguin. Not affiliated with Pudgy Penguins NFT. All rights reserved.
+    </footer>
+  </body>
+</html>
+
 
 
