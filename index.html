@@ -50,6 +50,31 @@
       .dark-mode .bg-blue-100 {
         background-color: #1e293b;
       }
+
+      @media (max-width: 768px) {
+        header div {
+          flex-direction: column;
+          align-items: start;
+        }
+        nav {
+          margin-top: 1rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .grid {
+          grid-template-columns: 1fr !important;
+        }
+        .text-5xl {
+          font-size: 2rem;
+        }
+        .text-3xl {
+          font-size: 1.5rem;
+        }
+        form input, form textarea {
+          font-size: 1rem;
+        }
+      }
     </style>
     <script>
       window.addEventListener('scroll', () => {
@@ -74,7 +99,7 @@
   <body class="bg-gradient-to-b from-blue-100 to-white text-gray-900 font-sans">
     <!-- Header -->
     <header class="bg-white shadow sticky top-0 z-50">
-      <div class="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
+      <div class="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center flex-wrap">
         <h1 class="text-2xl font-bold text-blue-800">🐧 Pudgy Penguins</h1>
         <nav class="space-x-6 font-medium">
           <a href="#home" class="hover:text-blue-600">Home</a>
@@ -82,14 +107,14 @@
           <a href="#about" class="hover:text-blue-600">About</a>
           <a href="#contact" class="hover:text-blue-600">Contact</a>
         </nav>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 mt-3 md:mt-0">
           <button onclick="toggleDarkMode()" class="bg-gray-200 px-3 py-1 rounded text-sm hover:bg-gray-300">🌓 Toggle</button>
           <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-all duration-200">Connect Wallet</button>
         </div>
       </div>
     </header>
 
-    <main id="home" class="max-w-6xl mx-auto px-4 py-12">
+<main id="home" class="max-w-6xl mx-auto px-4 py-12">
   <div class="w-full text-center mt-10 mb-16">
     <h1 class="text-5xl font-extrabold text-blue-700 animate-bubble">🐧 PenguCoin</h1>
   </div>
@@ -102,21 +127,18 @@
       <p class="text-gray-700 text-sm italic mb-3">"Pudgy Penguins are a collection of 8,888 unique penguins sliding their way through Web3, promoting positivity and community."</p>
       <a href="https://pudgypenguins.com/" target="_blank" class="text-blue-600 font-medium hover:underline">Read more →</a>
     </article>
-
     <article class="bg-white p-6 rounded-xl shadow border hover:shadow-md transition-transform duration-300">
       <h3 class="text-xl font-bold mb-2">Pudgy Penguins Official Store</h3>
       <p class="text-gray-600 mb-2">The official store for Pudgy Penguins merchandise. Buy plushies, apparel, and more from the verified source.</p>
       <p class="text-gray-700 text-sm italic mb-3">"Pudgy Penguins toys are more than just plush. They're a bridge between digital culture and real-world smiles."</p>
       <a href="https://shop.pudgypenguins.com/" target="_blank" class="text-blue-600 font-medium hover:underline">Read more →</a>
     </article>
-
     <article class="bg-white p-6 rounded-xl shadow border hover:shadow-md transition-transform duration-300">
       <h3 class="text-xl font-bold mb-2">What Are Pudgy Penguins?</h3>
       <p class="text-gray-600 mb-2">An introductory article from OSL Academy explaining the origins and impact of the Pudgy Penguins NFT project.</p>
       <p class="text-gray-700 text-sm italic mb-3">"They are more than collectibles — they're a community-driven movement in Web3 focused on joy and inclusion."</p>
       <a href="https://osl.com/academy/article/what-are-pudgy-penguins-pengu" target="_blank" class="text-blue-600 font-medium hover:underline">Read more →</a>
     </article>
-
     <article class="bg-white p-6 rounded-xl shadow border hover:shadow-md transition-transform duration-300">
       <h3 class="text-xl font-bold mb-2">Pudgy Penguins vs Dogecoin</h3>
       <p class="text-gray-600 mb-2">A comparison from CA Lab between NFTs like Pudgy Penguins and meme cryptocurrencies like Dogecoin.</p>
@@ -153,6 +175,7 @@
 <footer class="text-center text-sm text-gray-500 mt-20 mb-8">
   © 2025 PudgyPenguin. Not affiliated with Pudgy Penguins NFT. All rights reserved.
 </footer>
+
 
 
 
