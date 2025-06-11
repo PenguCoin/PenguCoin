@@ -20,20 +20,31 @@
       .animate-bubble {
         animation: bubble 1.8s ease-in-out forwards;
       }
+      .fade-in {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 1s ease-out forwards;
+      }
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
     </style>
   </head>
   <body class="bg-gradient-to-b from-blue-100 to-white text-gray-900 font-sans">
     <!-- Header -->
-    <header class="bg-white shadow">
+    <header class="bg-white shadow sticky top-0 z-50">
       <div class="max-w-6xl mx-auto px-4 py-6 flex justify-between items-center">
         <h1 class="text-2xl font-bold text-blue-800">🐧 Pudgy Penguins</h1>
         <nav class="space-x-6 font-medium">
-          <a href="#home" class="hover:text-blue-600">Home</a>
+          <a href="index.html" class="hover:text-blue-600">Home</a>
           <a href="#articles" class="hover:text-blue-600">Articles</a>
-          <a href="#about" class="hover:text-blue-600">About</a>
-          <a href="#contact" class="hover:text-blue-600">Contact</a>
+          <a href="about.html" class="hover:text-blue-600">About</a>
+          <a href="contact.html" class="hover:text-blue-600">Contact</a>
         </nav>
-        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Connect Wallet</button>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-all duration-200">Connect Wallet</button>
       </div>
     </header>
 
@@ -44,8 +55,8 @@
       </div>
 
       <!-- Articles Section -->
-      <section id="articles" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+      <section id="articles" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 fade-in">
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md transition-transform duration-300 hover:scale-105">
           <h4 class="font-semibold mb-2">
             <a href="https://pudgypenguins.com/" target="_blank" class="text-blue-600 hover:underline">
               Pudgy Penguins Official Site
@@ -54,7 +65,7 @@
           <p class="text-sm text-gray-600">This is the official website for the Pudgy Penguins NFT project. Explore the real collection, team, and roadmap.</p>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md transition-transform duration-300 hover:scale-105">
           <h4 class="font-semibold mb-2">
             <a href="https://shop.pudgypenguins.com/" target="_blank" class="text-blue-600 hover:underline">
               Pudgy Penguins Official Store
@@ -63,7 +74,7 @@
           <p class="text-sm text-gray-600">The official online store for Pudgy Penguins merchandise. Buy plushies, apparel, and more from the verified source.</p>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md transition-transform duration-300 hover:scale-105">
           <h4 class="font-semibold mb-2">
             <a href="https://osl.com/academy/article/what-are-pudgy-penguins-pengu" target="_blank" class="text-blue-600 hover:underline">
               What Are Pudgy Penguins?
@@ -72,7 +83,7 @@
           <p class="text-sm text-gray-600">A beginner-friendly article from OSL Academy that explains the origins, purpose, and growth of the Pudgy Penguins NFT collection.</p>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md">
+        <div class="bg-white p-4 rounded-xl shadow-sm border hover:shadow-md transition-transform duration-300 hover:scale-105">
           <h4 class="font-semibold mb-2">
             <a href="https://ca-lab.isca.org.sg/technicalities/pudgy-penguins-versus-dogecoin/" target="_blank" class="text-blue-600 hover:underline">
               Pudgy Penguins vs Dogecoin
@@ -80,42 +91,6 @@
           </h4>
           <p class="text-sm text-gray-600">An analytical comparison between Pudgy Penguins NFTs and Dogecoin from a financial and technical lens by ISCA’s CA Lab.</p>
         </div>
-      </section>
-
-      <!-- About Section -->
-      <section id="about" class="mt-20">
-        <h2 class="text-3xl font-bold mb-4">About Us</h2>
-        <p class="text-gray-700 max-w-3xl">
-          PenguCoin is a fan-driven hub that curates news, articles, and tools related to Pudgy Penguins and the wider NFT space. 
-          We are <strong>not affiliated</strong> with the official Pudgy Penguins NFT project. This site is independently maintained for educational and entertainment purposes.
-        </p>
-      </section>
-
-      <!-- Contact Section -->
-      <section id="contact" class="mt-20">
-        <h2 class="text-3xl font-bold mb-4">Contact Us</h2>
-        <form action="mailto:pengucoin.io@gmail.com" method="POST" enctype="text/plain" class="max-w-xl space-y-4">
-          <input type="text" name="name" placeholder="Your Name" class="w-full px-4 py-2 border border-gray-300 rounded" required />
-          <input type="email" name="email" placeholder="Your Email" class="w-full px-4 py-2 border border-gray-300 rounded" required />
-          <textarea name="message" placeholder="Your Message" class="w-full px-4 py-2 border border-gray-300 rounded" rows="5" required></textarea>
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Send Message</button>
-        </form>
-      </section>
-
-      <!-- Feedback Section -->
-      <section id="feedback" class="mt-20">
-        <h2 class="text-3xl font-bold mb-4">Feedback</h2>
-        <form action="mailto:pengucoin.io@gmail.com" method="POST" enctype="text/plain" class="max-w-xl space-y-4">
-          <label class="block text-sm font-medium text-gray-700">How would you rate this site?</label>
-          <select name="rating" class="w-full px-4 py-2 border border-gray-300 rounded">
-            <option value="Excellent">Excellent</option>
-            <option value="Good">Good</option>
-            <option value="Average">Average</option>
-            <option value="Poor">Poor</option>
-          </select>
-          <textarea name="comments" placeholder="Additional Comments" class="w-full px-4 py-2 border border-gray-300 rounded" rows="4"></textarea>
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Submit Feedback</button>
-        </form>
       </section>
     </main>
 
@@ -125,6 +100,7 @@
     </footer>
   </body>
 </html>
+
 
 
 
