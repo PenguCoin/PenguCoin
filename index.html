@@ -164,36 +164,8 @@
   <footer class="text-center py-6 text-gray-500 text-sm">
     © 2025 PenguCoin. This site is not affiliated with Pudgy Penguins.
   </footer>
-<script>
-  // Create floating penguin images
-  for (let i = 0; i < 6; i++) {
-    const img = document.createElement('img');
-    img.src = 'https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png';
-    img.alt = 'Pudgy Penguin';
-    img.style.position = 'fixed';
-    img.style.width = '40px';
-    img.style.zIndex = '10';
-    img.style.top = Math.random() * window.innerHeight + 'px';
-    img.style.left = Math.random() * window.innerWidth + 'px';
-    img.style.opacity = '0.2';
-    img.style.animation = `float${i} 20s linear infinite`;
-    document.body.appendChild(img);
-  }
-  // Keyframe styles
-  const styleSheet = document.createElement("style");
-  styleSheet.type = "text/css";
-  let styles = '';
-  for (let i = 0; i < 6; i++) {
-    styles += `@keyframes float${i} {
-      0% { transform: translateY(0); }
-      50% { transform: translateY(-20px); }
-      100% { transform: translateY(0); }
-    }
-`;
-  }
-  styleSheet.innerText = styles;
-  document.head.appendChild(styleSheet);
-</script>
+
 </body>
 </html>
+
 
