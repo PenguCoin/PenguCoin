@@ -1,175 +1,237 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5451310722004051" crossorigin="anonymous"></script>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PudgyPenguin</title>
-
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="Your stop for everything Pudgy Penguins related — news, official links, and fun content." />
-  <meta name="keywords" content="Pudgy Penguins, NFT, crypto, PenguCoin, collectibles, penguin store" />
-  <meta name="author" content="PenguCoin" />
-  <meta property="og:title" content="PenguCoin — Everything Pudgy Penguin" />
-  <meta property="og:description" content="Explore articles, merch, comparisons, and more about Pudgy Penguins." />
-  <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png" />
-  <meta property="og:url" content="https://yourdomain.com" />
-  <meta name="twitter:card" content="summary_large_image" />
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html { scroll-behavior: smooth; }
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)),
-        url('https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png');
-      background-repeat: repeat;
-      background-size: 100px;
-      background-position: center;
-      background-attachment: fixed;
-      opacity: 0.1;
-      z-index: -1;
-      pointer-events: none;
-    }
-    .dark-mode {
-      background-color: #0f172a;
-      color: #f8fafc;
-    }
-    .dark-mode .bg-white { background-color: #1e293b !important; }
-    .dark-mode .text-gray-700, .dark-mode .text-gray-600 { color: #f8fafc !important; }
-    .dark-mode .bg-blue-100 { background-color: #0f172a; }
-    .dark-mode a { color: #93c5fd !important; }
-    header.shrink {
-      padding-top: 0.25rem !important;
-      padding-bottom: 0.25rem !important;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-  </style>
-  <script>
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-    }
-    let lastScroll = 0;
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const header = document.querySelector('header');
-          const currentScroll = window.pageYOffset;
-          if (currentScroll > lastScroll && currentScroll > 50) {
-            header.classList.add('shrink');
-          } else {
-            header.classList.remove('shrink');
-          }
-          lastScroll = currentScroll <= 0 ? 0 : currentScroll;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const sections = document.querySelectorAll("section");
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) entry.target.classList.add("opacity-100", "translate-y-0");
-        });
-      }, { threshold: 0.1 });
-
-      sections.forEach(section => {
-        section.classList.add("opacity-0", "translate-y-6", "transition", "duration-700");
-        observer.observe(section);
-      });
-    });
-  </script>
-</head>
-<body class="bg-gradient-to-tr from-blue-300 via-white to-blue-100 text-gray-900 font-sans relative transition-colors duration-500">
-  <img src="https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png" alt="Mascot" class="absolute top-6 left-6 w-20 hidden md:block" />
-
-  <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 via-white to-purple-300">
-  <div class="text-center px-6 py-20">
-    <h1 class="text-4xl md:text-6xl font-bold text-blue-900 drop-shadow-lg mb-6 animate-pulse">Your stop for everything Pudgy Penguin related</h1>
-    <a href="#home" class="mt-6 inline-block bg-white text-blue-600 px-6 py-3 rounded-full shadow hover:bg-gray-100 transition">Enter Site</a>
-  </div>
-</section>
-<header class="sticky top-0 z-50 bg-white bg-opacity-90 backdrop-blur p-4 flex justify-between items-center shadow">
-  <h1 class="text-xl font-bold">PenguCoin</h1>
-  <div class="space-x-4 hidden md:flex">
-    <a href="#home" class="hover:underline">Home</a>
-    <a href="#articles" class="hover:underline">Articles</a>
-    <a href="#about" class="hover:underline">About</a>
-    <a href="#contact" class="hover:underline">Contact</a>
-    <button onclick="toggleDarkMode()" class="bg-gray-200 px-2 py-1 rounded">🌙</button>
-  </div>
-</header>
-<main class="max-w-4xl mx-auto p-6 space-y-20">
-  <section id="home" class="text-center pt-10">
-    <h2 class="text-5xl font-bold animate-bounce mb-4">PenguCoin</h2>
-    <p class="text-lg text-gray-600">Explore everything Pudgy Penguin-related — from official links to fun comparisons.</p>
-  </section>
-  <section id="articles" class="space-y-12">
-    <h2 class="text-3xl font-bold mb-4">Articles</h2>
-    <div class="space-y-8">
-      <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-        <h3 class="text-xl font-semibold">Official Pudgy Penguins Site</h3>
-        <p class="text-gray-600">This is the official website for the Pudgy Penguins NFT collection.</p>
-        <p class="text-sm text-gray-500">Visit their page to explore the team, vision, and roadmap.</p>
-        <a href="https://pudgypenguins.com/" target="_blank" class="text-blue-600 underline">Read more →</a>
-      </div>
-      <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-        <h3 class="text-xl font-semibold">Official Pudgy Penguins Store</h3>
-        <p class="text-gray-600">Buy plush toys, collectibles, and more from the official Pudgy shop.</p>
-        <p class="text-sm text-gray-500">Perfect for collectors and fans alike.</p>
-        <a href="https://shop.pudgypenguins.com/" target="_blank" class="text-blue-600 underline">Read more →</a>
-      </div>
-      <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-        <h3 class="text-xl font-semibold">What Are Pudgy Penguins?</h3>
-        <p class="text-gray-600">An overview of the NFT project and its growing popularity.</p>
-        <p class="text-sm text-gray-500">Great for newcomers looking to learn more.</p>
-        <a href="https://osl.com/academy/article/what-are-pudgy-penguins-pengu" target="_blank" class="text-blue-600 underline">Read more →</a>
-      </div>
-      <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-        <h3 class="text-xl font-semibold">Pudgy Penguins vs Dogecoin</h3>
-        <p class="text-gray-600">A fun comparison between meme culture icons in crypto.</p>
-        <p class="text-sm text-gray-500">NFTs vs Coins — which reigns supreme?</p>
-        <a href="https://ca-lab.isca.org.sg/technicalities/pudgy-penguins-versus-dogecoin/" target="_blank" class="text-blue-600 underline">Read more →</a>
-      </div>
-    </div>
-  </section>
-  <section id="about" class="bg-white p-6 rounded shadow">
-    <h2 class="text-2xl font-bold mb-2">About Us</h2>
-    <p class="text-gray-700">This site is a fan-made project to curate info on Pudgy Penguins. We are not affiliated with the official Pudgy Penguins team or brand.</p>
-  </section>
-  <section id="contact" class="bg-white p-6 rounded shadow">
-    <h2 class="text-2xl font-bold mb-2">Contact Us</h2>
-    <form action="mailto:pengucoin.io@gmail.com" method="POST" enctype="text/plain" class="space-y-4">
-      <input type="text" name="name" placeholder="Your Name" class="w-full p-2 border rounded" required />
-      <input type="email" name="email" placeholder="Your Email" class="w-full p-2 border rounded" required />
-      <textarea name="message" rows="5" placeholder="Your Message" class="w-full p-2 border rounded" required></textarea>
-      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send Message</button>
-    </form>
-  </section>
-  <section id="feedback" class="bg-white p-6 rounded shadow">
-    <h2 class="text-2xl font-bold mb-2">Feedback</h2>
-    <form class="space-y-4">
-      <label class="block text-gray-700">Rate your experience:</label>
-      <select class="w-full p-2 border rounded">
-        <option>Excellent</option>
-        <option>Good</option>
-        <option>Average</option>
-        <option>Poor</option>
-      </select>
-      <textarea rows="3" class="w-full p-2 border rounded" placeholder="Any suggestions?"></textarea>
-      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Submit Feedback</button>
-    </form>
-  </section>
-</main>
-<footer class="text-center py-6 text-gray-500 text-sm">
-  © 2025 PenguCoin. This site is not affiliated with Pudgy Penguins.
-</footer>
+root@59f9b9bfc43d:/workspace/PenguCoin# cat -n index.html
+     1  <!DOCTYPE html>
+     2  <html lang="en">
+     3  <head>
+     4    <script async src="https://pagead2.googlesyndication.com/pagead/js/ads
+bygoogle.js?client=ca-pub-5451310722004051" crossorigin="anonymous"></script>
+     5    <meta charset="UTF-8" />
+     6    <meta name="viewport" content="width=device-width, initial-scale=1.0"
+/>
+     7    <title>PudgyPenguin</title>
+     8
+     9    <!-- SEO Meta Tags -->
+    10    <meta name="description" content="Your stop for everything Pudgy Pengu
+ins related — news, official links, and fun content." />
+    11    <meta name="keywords" content="Pudgy Penguins, NFT, crypto, PenguCoin,
+ collectibles, penguin store" />
+    12    <meta name="author" content="PenguCoin" />
+    13    <meta property="og:title" content="PenguCoin — Everything Pudgy Pengui
+n" />
+    14    <meta property="og:description" content="Explore articles, merch, comp
+arisons, and more about Pudgy Penguins." />
+    15    <meta property="og:image" content="https://upload.wikimedia.org/wikipe
+dia/en/9/97/Pudgy_Penguins_logo.png" />
+    16    <meta property="og:url" content="https://yourdomain.com" />
+    17    <meta name="twitter:card" content="summary_large_image" />
+    18
+    19    <script src="https://cdn.tailwindcss.com"></script>
+    20    <style>
+    21      html { scroll-behavior: smooth; }
+    22      body::before {
+    23        content: "";
+    24        position: fixed;
+    25        top: 0; left: 0;
+    26        width: 100%; height: 100%;
+    27        background-image:
+    28          linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)),
+    29          url('https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Pengui
+ns_logo.png');
+    30        background-repeat: repeat;
+    31        background-size: 100px;
+    32        background-position: center;
+    33        background-attachment: fixed;
+    34        opacity: 0.1;
+    35        z-index: -1;
+    36        pointer-events: none;
+    37      }
+    38      .dark-mode {
+    39        background-color: #0f172a;
+    40        color: #f8fafc;
+    41      }
+    42      .dark-mode .bg-white { background-color: #1e293b !important; }
+    43      .dark-mode .text-gray-700, .dark-mode .text-gray-600 { color: #f8faf
+c !important; }
+    44      .dark-mode .bg-blue-100 { background-color: #0f172a; }
+    45      .dark-mode a { color: #93c5fd !important; }
+    46      header.shrink {
+    47        padding-top: 0.25rem !important;
+    48        padding-bottom: 0.25rem !important;
+    49        transition: all 0.3s ease;
+    50        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    51      }
+    52    </style>
+    53    <script>
+    54      function toggleDarkMode() {
+    55        document.body.classList.toggle('dark-mode');
+    56      }
+    57      let lastScroll = 0;
+    58      let ticking = false;
+    59      window.addEventListener('scroll', () => {
+    60        if (!ticking) {
+    61          window.requestAnimationFrame(() => {
+    62            const header = document.querySelector('header');
+    63            const currentScroll = window.pageYOffset;
+    64            if (currentScroll > lastScroll && currentScroll > 50) {
+    65              header.classList.add('shrink');
+    66            } else {
+    67              header.classList.remove('shrink');
+    68            }
+    69            lastScroll = currentScroll <= 0 ? 0 : currentScroll;
+    70            ticking = false;
+    71          });
+    72          ticking = true;
+    73        }
+    74      });
+    75
+    76      document.addEventListener("DOMContentLoaded", () => {
+    77        const sections = document.querySelectorAll("section");
+    78        const observer = new IntersectionObserver(entries => {
+    79          entries.forEach(entry => {
+    80            if (entry.isIntersecting) entry.target.classList.add("opacity-
+100", "translate-y-0");
+    81          });
+    82        }, { threshold: 0.1 });
+    83
+    84        sections.forEach(section => {
+    85          section.classList.add("opacity-0", "translate-y-6", "transition"
+, "duration-700");
+    86          observer.observe(section);
+    87        });
+    88      });
+    89    </script>
+    90  </head>
+    91  <body class="bg-gradient-to-tr from-blue-300 via-white to-blue-100 text-
+gray-900 font-sans relative transition-colors duration-500">
+    92    <img src="https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguin
+s_logo.png" alt="Mascot" class="absolute top-6 left-6 w-20 hidden md:block" />
+    93
+    94    <section class="min-h-screen flex items-center justify-center bg-gradi
+ent-to-br from-blue-500 via-white to-purple-300">
+    95    <div class="text-center px-6 py-20">
+    96      <h1 class="text-4xl md:text-6xl font-bold text-blue-900 drop-shadow-
+lg mb-6 animate-pulse">Your stop for everything Pudgy Penguin related</h1>
+    97      <a href="#home" class="mt-6 inline-block bg-white text-blue-600 px-6
+ py-3 rounded-full shadow hover:bg-gray-100 transition">Enter Site</a>
+    98    </div>
+    99  </section>
+   100  <header class="sticky top-0 z-50 bg-white bg-opacity-90 backdrop-blur p-
+4 flex justify-between items-center shadow">
+   101    <h1 class="text-xl font-bold">PenguCoin</h1>
+   102    <div class="space-x-4 hidden md:flex">
+   103      <a href="#home" class="hover:underline">Home</a>
+   104      <a href="#articles" class="hover:underline">Articles</a>
+   105      <a href="#about" class="hover:underline">About</a>
+   106      <a href="#contact" class="hover:underline">Contact</a>
+   107      <button onclick="toggleDarkMode()" class="bg-gray-200 px-2 py-1 roun
+ded">🌙</button>
+   108    </div>
+   109  </header>
+   110  <main class="max-w-4xl mx-auto p-6 space-y-20">
+   111    <section id="home" class="text-center pt-10">
+   112      <h2 class="text-5xl font-bold animate-bounce mb-4">PenguCoin</h2>
+   113      <p class="text-lg text-gray-600">Explore everything Pudgy Penguin-re
+lated — from official links to fun comparisons.</p>
+   114    </section>
+   115    <section id="articles" class="space-y-12">
+   116      <h2 class="text-3xl font-bold mb-4">Articles</h2>
+   117      <div class="space-y-8">
+   118        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition
+-transform hover:-translate-y-1">
+   119          <h3 class="text-xl font-semibold">Official Pudgy Penguins Site</
+h3>
+   120          <p class="text-gray-600">This is the official website for the Pu
+dgy Penguins NFT collection.</p>
+   121          <p class="text-sm text-gray-500">Visit their page to explore the
+ team, vision, and roadmap.</p>
+   122          <a href="https://pudgypenguins.com/" target="_blank" class="text
+-blue-600 underline">Read more →</a>
+   123        </div>
+   124        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition
+-transform hover:-translate-y-1">
+   125          <h3 class="text-xl font-semibold">Official Pudgy Penguins Store<
+/h3>
+   126          <p class="text-gray-600">Buy plush toys, collectibles, and more
+from the official Pudgy shop.</p>
+   127          <p class="text-sm text-gray-500">Perfect for collectors and fans
+ alike.</p>
+   128          <a href="https://shop.pudgypenguins.com/" target="_blank" class=
+"text-blue-600 underline">Read more →</a>
+   129        </div>
+   130        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition
+-transform hover:-translate-y-1">
+   131          <h3 class="text-xl font-semibold">What Are Pudgy Penguins?</h3>
+   132          <p class="text-gray-600">An overview of the NFT project and its
+growing popularity.</p>
+   133          <p class="text-sm text-gray-500">Great for newcomers looking to
+learn more.</p>
+   134          <a href="https://osl.com/academy/article/what-are-pudgy-penguins
+" target="_blank" class="text-blue-600 underline">Read more →</a>
+   135        </div>
+   136        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition
+-transform hover:-translate-y-1">
+   137          <h3 class="text-xl font-semibold">Pudgy Penguins vs Dogecoin</h3
+>
+   138          <p class="text-gray-600">A fun comparison between meme culture i
+cons in crypto.</p>
+   139          <p class="text-sm text-gray-500">NFTs vs Coins — which reigns su
+preme?</p>
+   140          <a href="https://ca-lab.isca.org.sg/technicalities/pudgy-penguin
+s-versus-dogecoin/" target="_blank" class="text-blue-600 underline">Read more →<
+/a>
+   141        </div>
+   142        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition
+-transform hover:-translate-y-1">
+   143          <h3 class="text-xl font-semibold">PenguCoin Mention on X</h3>
+   144          <p class="text-gray-600">Tweet from @husker_eth highlighting Pen
+guCoin.</p>
+   145          <p class="text-sm text-gray-500">Join the conversation on social
+ media.</p>
+   146          <a href="https://x.com/husker_eth/status/1936831680842789201" ta
+rget="_blank" class="text-blue-600 underline">Read more →</a>
+   147        </div>
+   148      </div>
+   149    </section>
+   150    <section id="about" class="bg-white p-6 rounded shadow">
+   151      <h2 class="text-2xl font-bold mb-2">About Us</h2>
+   152      <p class="text-gray-700">This site is a fan-made project to curate i
+nfo on Pudgy Penguins. We are not affiliated with the official Pudgy Penguins te
+am or brand.</p>
+   153    </section>
+   154    <section id="contact" class="bg-white p-6 rounded shadow">
+   155      <h2 class="text-2xl font-bold mb-2">Contact Us</h2>
+   156      <form action="mailto:pengucoin.io@gmail.com" method="POST" enctype="
+text/plain" class="space-y-4">
+   157        <input type="text" name="name" placeholder="Your Name" class="w-fu
+ll p-2 border rounded" required />
+   158        <input type="email" name="email" placeholder="Your Email" class="w
+-full p-2 border rounded" required />
+   159        <textarea name="message" rows="5" placeholder="Your Message" class
+="w-full p-2 border rounded" required></textarea>
+   160        <button type="submit" class="bg-blue-600 text-white px-4 py-2 roun
+ded hover:bg-blue-700">Send Message</button>
+   161      </form>
+   162    </section>
+   163    <section id="feedback" class="bg-white p-6 rounded shadow">
+   164      <h2 class="text-2xl font-bold mb-2">Feedback</h2>
+   165      <form class="space-y-4">
+   166        <label class="block text-gray-700">Rate your experience:</label>
+   167        <select class="w-full p-2 border rounded">
+   168          <option>Excellent</option>
+   169          <option>Good</option>
+   170          <option>Average</option>
+   171          <option>Poor</option>
+   172        </select>
+   173        <textarea rows="3" class="w-full p-2 border rounded" placeholder="
+Any suggestions?"></textarea>
+   174        <button type="submit" class="bg-green-600 text-white px-4 py-2 rou
+nded hover:bg-green-700">Submit Feedback</button>
+   175      </form>
+   176    </section>
+   177  </main>
+   178  <footer class="text-center py-6 text-gray-500 text-sm">
+   179    © 2025 PenguCoin. This site is not affiliated with Pudgy Penguins.
+   180  </footer>
+   181
+   182  </body>
+   183  </html>
 
