@@ -1,165 +1,838 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PudgyPenguin</title>
+import React, { useEffect, useMemo, useState } from "react";
 
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="Your stop for everything Pudgy Penguins related — news, official links, and fun content." />
-  <meta name="keywords" content="Pudgy Penguins, NFT, crypto, PenguCoin, collectibles, penguin store" />
-  <meta name="author" content="PenguCoin" />
-  <meta property="og:title" content="PenguCoin — Everything Pudgy Penguin" />
-  <meta property="og:description" content="Explore articles, merch, comparisons, and more about Pudgy Penguins." />
-  <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png" />
-  <meta property="og:url" content="https://yourdomain.com" />
-  <meta name="twitter:card" content="summary_large_image" />
+/**
+ * FutStocks — Fantasy ROI Web Game (Single-file React component)
+ * --------------------------------------------------------------
+ * • No real money. Virtual coin economy only.
+ * • Model B: You must SELL cards to realize profit/loss (no auto-crediting).
+ * • Buy player cards BEFORE a fixture. After the match resolves, their value changes by performance.
+ * • Sell finished cards to update your coin balance.
+ * • Everything persists in localStorage.
+ *
+ * Stack: React + TailwindCSS (no external UI deps)
+ * Drop this component into any React app (Vite/Next), ensure Tailwind is configured.
+ *
+ * Quick Start (Vite):
+ *   - npm create vite@latest futstocks -- --template react
+ *   - cd futstocks && npm i && npm i tailwindcss postcss autoprefixer && npx tailwindcss init -p
+ *   - Configure tailwind "content" to include src/**/*.jsx
+ *   - Add Tailwind directives in index.css: @tailwind base; @tailwind components; @tailwind utilities;
+ *   - Replace App.jsx content with this component and export default FutStocks.
+ */
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html { scroll-behavior: smooth; }
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)),
-        url('https://upload.wikimedia.org/wikipedia/en/9/97/Pudgy_Penguins_logo.png');
-      background-repeat: no-repeat;
-      background-size: contain;
-      background-position: center;
-      background-attachment: fixed;
-      opacity: 0.05;
-      z-index: -1;
-      pointer-events: none;
+// --------------------------- Helpers & Types ---------------------------
+const LS_KEY = "futstocks_state_v1";
+
+const POS = {
+  GK: "GK",
+  DEF: "DEF",
+  MID: "MID",
+  FWD: "FWD",
+};
+
+/** Utility */
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a; // inclusive
+const chance = (p) => Math.random() < p; // p in [0,1]
+
+// --------------------------- Seed Data ---------------------------
+const TEAMS = [
+  { id: "FCK", name: "FC København" },
+  { id: "MUN", name: "Manchester United" },
+  { id: "RIV", name: "River Plate" },
+  { id: "AJX", name: "Ajax" },
+  { id: "SEV", name: "Sevilla" },
+  { id: "LAZ", name: "Lazio" },
+  { id: "OLY", name: "Olympiacos" },
+  { id: "SAN", name: "Santos" },
+];
+
+// A compact demo pool (add more if you like)
+const PLAYERS = [
+  { id: "p1",  name: "Kamil Grabara",    pos: POS.GK,  team: "FCK", basePrice: 85 },
+  { id: "p2",  name: "Rasmus Falk",      pos: POS.MID, team: "FCK", basePrice: 90 },
+  { id: "p3",  name: "Roony Bardghji",   pos: POS.FWD, team: "FCK", basePrice: 120 },
+  { id: "p4",  name: "Marcus Rashford",  pos: POS.FWD, team: "MUN", basePrice: 140 },
+  { id: "p5",  name: "Bruno Fernandes",  pos: POS.MID, team: "MUN", basePrice: 135 },
+  { id: "p6",  name: "Lisandro Martínez",pos: POS.DEF, team: "MUN", basePrice: 95 },
+  { id: "p7",  name: "Franco Armani",    pos: POS.GK,  team: "RIV", basePrice: 80 },
+  { id: "p8",  name: "Enzo Pérez",       pos: POS.MID, team: "RIV", basePrice: 88 },
+  { id: "p9",  name: "Santiago Simón",   pos: POS.FWD, team: "RIV", basePrice: 98 },
+  { id: "p10", name: "Brian Brobbey",    pos: POS.FWD, team: "AJX", basePrice: 110 },
+  { id: "p11", name: "Steven Berghuis",  pos: POS.MID, team: "AJX", basePrice: 100 },
+  { id: "p12", name: "Jurrien Timber*",  pos: POS.DEF, team: "AJX", basePrice: 92 },
+  { id: "p13", name: "Youssef En-Nesyri",pos: POS.FWD, team: "SEV", basePrice: 112 },
+  { id: "p14", name: "Luis Alberto",     pos: POS.MID, team: "LAZ", basePrice: 105 },
+  { id: "p15", name: "Konstantinos Fortounis", pos: POS.MID, team: "OLY", basePrice: 96 },
+  { id: "p16", name: "Marcos Leonardo",  pos: POS.FWD, team: "SAN", basePrice: 108 },
+];
+
+// Build some demo fixtures over the next few hours
+function hoursFromNow(h) {
+  const t = new Date();
+  t.setHours(t.getHours() + h);
+  return t.toISOString();
+}
+
+const FIXTURES = [
+  {
+    id: "f1",
+    home: "FCK",
+    away: "MUN",
+    kickoff: hoursFromNow(2),
+    status: "upcoming", // upcoming | finished
+    homePlayers: ["p1", "p2", "p3"],
+    awayPlayers: ["p4", "p5", "p6"],
+    result: null, // { homeGoals, awayGoals, stats: Record<playerId, StatLine> }
+  },
+  {
+    id: "f2",
+    home: "RIV",
+    away: "AJX",
+    kickoff: hoursFromNow(4),
+    status: "upcoming",
+    homePlayers: ["p7", "p8", "p9"],
+    awayPlayers: ["p10", "p11", "p12"],
+    result: null,
+  },
+  {
+    id: "f3",
+    home: "SEV",
+    away: "LAZ",
+    kickoff: hoursFromNow(6),
+    status: "upcoming",
+    homePlayers: ["p13"],
+    awayPlayers: ["p14"],
+    result: null,
+  },
+  {
+    id: "f4",
+    home: "OLY",
+    away: "SAN",
+    kickoff: hoursFromNow(8),
+    status: "upcoming",
+    homePlayers: ["p15"],
+    awayPlayers: ["p16"],
+    result: null,
+  },
+];
+
+// --------------------------- Scoring (Model B mechanics) ---------------------------
+/**
+ * Performance scoring → card value multiplier
+ *
+ * Points:
+ *  Team result: Win +10, Draw +3, Loss +0
+ *  Minutes: <60 => +2, 60-89 => +4, 90 => +6
+ *  Goals: FWD +8, MID +10, DEF/GK +12 each
+ *  Assists: +6 each
+ *  Clean sheet (DEF/GK, ≥60 min, team concedes 0): +8
+ *  Saves (GK): +1 per 3 saves (floor)
+ *  Penalty save (GK): +8
+ *  Cards: yellow -3, red -7
+ *  Own goal: -6 (each)
+ *  Missed penalty: -5 (each)
+ *  Penalty conceded: -5 (each)
+ *
+ * Value update (post-match):
+ *   newValue = basePrice * (1 + score/50), then clamped to [0.2×base, 3×base]
+ */
+
+function scoreForPlayer(stat, pos, teamResult) {
+  // teamResult: 'W' | 'D' | 'L'
+  let s = 0;
+  if (teamResult === "W") s += 10;
+  else if (teamResult === "D") s += 3;
+
+  if (stat.minutes >= 90) s += 6;
+  else if (stat.minutes >= 60) s += 4;
+  else if (stat.minutes > 0) s += 2;
+
+  const goalPts = pos === POS.FWD ? 8 : pos === POS.MID ? 10 : 12;
+  s += goalPts * (stat.goals || 0);
+  s += 6 * (stat.assists || 0);
+
+  if ((pos === POS.DEF || pos === POS.GK) && stat.minutes >= 60 && stat.cleanSheet) s += 8;
+
+  if (pos === POS.GK) {
+    s += Math.floor((stat.saves || 0) / 3);
+    s += 8 * (stat.penSaves || 0);
+  }
+
+  s -= 3 * (stat.yellow || 0);
+  s -= 7 * (stat.red || 0);
+  s -= 6 * (stat.ownGoals || 0);
+  s -= 5 * (stat.penMiss || 0);
+  s -= 5 * (stat.penConceded || 0);
+
+  return s;
+}
+
+function newValueFromScore(basePrice, score) {
+  const nv = basePrice * (1 + score / 50);
+  return Math.round(clamp(nv, basePrice * 0.2, basePrice * 3));
+}
+
+// Random statline generator by position
+function randomStatline(pos, teamGoalsFor, teamGoalsAgainst) {
+  const minutes = chance(0.1) ? 0 : chance(0.15) ? randInt(1, 59) : chance(0.35) ? randInt(60, 89) : 90;
+  let goals = 0, assists = 0, yellow = 0, red = 0, ownGoals = 0, penMiss = 0, penSaves = 0, saves = 0, penConceded = 0;
+
+  // rough position-weighted probabilities
+  if (minutes > 0) {
+    if (pos === POS.FWD) goals = chance(0.35) ? 1 : chance(0.12) ? 2 : chance(0.03) ? 3 : 0;
+    if (pos === POS.MID) goals = chance(0.18) ? 1 : chance(0.05) ? 2 : 0;
+    if (pos === POS.DEF) goals = chance(0.08) ? 1 : 0;
+    if (pos === POS.GK) goals = 0;
+
+    assists = chance(0.25) ? 1 : chance(0.07) ? 2 : 0;
+    yellow = chance(0.15) ? 1 : 0;
+    red = yellow ? (chance(0.05) ? 1 : 0) : (chance(0.02) ? 1 : 0);
+    ownGoals = chance(0.01) ? 1 : 0;
+    penMiss = chance(0.03) ? 1 : 0;
+
+    if (pos === POS.GK) {
+      saves = randInt(0, 9);
+      penSaves = chance(0.05) ? 1 : 0;
+      penConceded = 0;
+    } else if (pos === POS.DEF) {
+      penConceded = chance(0.03) ? 1 : 0;
+    } else if (pos === POS.MID) {
+      penConceded = chance(0.02) ? 1 : 0;
+    } else {
+      penConceded = chance(0.01) ? 1 : 0;
     }
-    .dark-mode {
-      background-color: #0f172a;
-      color: #f8fafc;
+  }
+
+  const cleanSheet = minutes >= 60 && teamGoalsAgainst === 0;
+
+  return { minutes, goals, assists, yellow, red, ownGoals, penMiss, penSaves, saves, penConceded, cleanSheet };
+}
+
+// --------------------------- Storage ---------------------------
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn("Failed to parse LS", e);
+    return null;
+  }
+}
+function saveState(s) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  } catch {}
+}
+
+// --------------------------- Main Component ---------------------------
+export default function FutStocks() {
+  const [state, setState] = useState(() =>
+    loadState() || {
+      balance: 500,
+      players: PLAYERS,
+      teams: TEAMS,
+      fixtures: FIXTURES,
+      portfolio: [], // { id, playerId, fixtureId, boughtPrice, quantity, soldAt?: number }
+      tx: [], // transactions
     }
-    .dark-mode .bg-white { background-color: #1e293b !important; }
-    .dark-mode .text-gray-700, .dark-mode .text-gray-600 { color: #f8fafc !important; }
-    .dark-mode .bg-blue-100 { background-color: #0f172a; }
-    .dark-mode a { color: #93c5fd !important; }
-    header.shrink {
-      padding-top: 0.5rem !important;
-      padding-bottom: 0.5rem !important;
-      transition: padding 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-  </style>
-  <script>
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
+  );
+
+  const [tab, setTab] = useState("market");
+  const [fixtureFilter, setFixtureFilter] = useState("all");
+  const [query, setQuery] = useState("");
+
+  useEffect(() => saveState(state), [state]);
+
+  const byId = useMemo(() => ({
+    player: Object.fromEntries(state.players.map((p) => [p.id, p])),
+    team: Object.fromEntries(state.teams.map((t) => [t.id, t])),
+    fixture: Object.fromEntries(state.fixtures.map((f) => [f.id, f])),
+  }), [state.players, state.teams, state.fixtures]);
+
+  const upcomingFixtures = state.fixtures.filter((f) => f.status === "upcoming");
+  const finishedFixtures = state.fixtures.filter((f) => f.status === "finished");
+
+  // --------------------------- Game Actions ---------------------------
+  function buyCard(playerId, fixtureId, qty = 1) {
+    const player = byId.player[playerId];
+    const fixture = byId.fixture[fixtureId];
+    if (!player || !fixture || fixture.status !== "upcoming") return;
+    const cost = player.basePrice * qty;
+    if (state.balance < cost) return alert("Not enough coins.");
+
+    const item = {
+      id: `card_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      playerId,
+      fixtureId,
+      boughtPrice: player.basePrice,
+      quantity: qty,
+      soldAt: null,
+    };
+
+    setState((s) => ({
+      ...s,
+      balance: s.balance - cost,
+      portfolio: [item, ...s.portfolio],
+      tx: [{ id: `tx_${Date.now()}`, type: "BUY", amount: -cost, ts: new Date().toISOString(), meta: { playerId, fixtureId, qty } }, ...s.tx],
+    }));
+  }
+
+  function sellCard(cardId) {
+    const card = state.portfolio.find((c) => c.id === cardId);
+    if (!card || card.soldAt) return;
+
+    const player = byId.player[card.playerId];
+    const fixture = byId.fixture[card.fixtureId];
+    if (!fixture || fixture.status !== "finished") return alert("Match not finished yet.");
+
+    const stat = fixture.result?.stats?.[card.playerId] || {};
+    const teamRes = teamResultForPlayer(card.playerId, fixture);
+    const score = scoreForPlayer(stat, player.pos, teamRes);
+    const current = newValueFromScore(player.basePrice, score) * card.quantity;
+
+    setState((s) => ({
+      ...s,
+      balance: s.balance + current,
+      portfolio: s.portfolio.map((c) => (c.id === cardId ? { ...c, soldAt: current } : c)),
+      tx: [{ id: `tx_${Date.now()}`, type: "SELL", amount: current, ts: new Date().toISOString(), meta: { cardId } }, ...s.tx],
+    }));
+  }
+
+  function resolveFixture(fixtureId) {
+    const idx = state.fixtures.findIndex((f) => f.id === fixtureId);
+    if (idx === -1) return;
+    const f = state.fixtures[idx];
+    if (f.status === "finished") return;
+
+    const homeGoals = randInt(0, 4);
+    const awayGoals = randInt(0, 4);
+
+    const stats = {};
+    const allP = [...f.homePlayers, ...f.awayPlayers];
+    for (const pid of allP) {
+      const p = byId.player[pid];
+      const isHome = f.homePlayers.includes(pid);
+      const teamFor = isHome ? homeGoals : awayGoals;
+      const teamAgainst = isHome ? awayGoals : homeGoals;
+      stats[pid] = randomStatline(p.pos, teamFor, teamAgainst);
     }
 
-    window.addEventListener('scroll', () => {
-      const header = document.querySelector('header');
-      if (window.scrollY > 50) {
-        header.classList.add('shrink');
-      } else {
-        header.classList.remove('shrink');
-      }
+    const updated = {
+      ...f,
+      status: "finished",
+      result: { homeGoals, awayGoals, stats },
+    };
+
+    setState((s) => ({
+      ...s,
+      fixtures: s.fixtures.map((fx, i) => (i === idx ? updated : fx)),
+    }));
+  }
+
+  function resolveAllUpcoming() {
+    for (const f of state.fixtures.filter((x) => x.status === "upcoming")) {
+      resolveFixture(f.id);
+    }
+  }
+
+  function resetGame(confirmAlso = true) {
+    if (confirmAlso && !confirm("Reset all progress?")) return;
+    setState({
+      balance: 500,
+      players: PLAYERS,
+      teams: TEAMS,
+      fixtures: FIXTURES,
+      portfolio: [],
+      tx: [],
     });
-  </script>
-</head>
-<body class="bg-gradient-to-tr from-blue-300 via-white to-blue-100 text-gray-900 font-sans relative transition-colors duration-300">
+  }
 
-  <section class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 via-white to-purple-300">
-    <div class="text-center px-6 py-20">
-      <h1 class="text-4xl md:text-6xl font-bold text-blue-900 mb-6">Your stop for everything Pudgy Penguin related</h1>
-      <a href="#home" class="mt-6 inline-block bg-white text-blue-600 px-6 py-3 rounded-full shadow hover:bg-gray-100 transition">Enter Site</a>
+  function editStat(fixtureId, playerId, patch) {
+    setState((s) => ({
+      ...s,
+      fixtures: s.fixtures.map((f) => {
+        if (f.id !== fixtureId || !f.result) return f;
+        const next = { ...(f.result.stats || {}) };
+        const prev = next[playerId] || {};
+        next[playerId] = { ...prev, ...patch };
+        return { ...f, result: { ...f.result, stats: next } };
+      }),
+    }));
+  }
+
+  // --------------------------- Derived ---------------------------
+  function teamResultForPlayer(playerId, fixture) {
+    const isHome = fixture.homePlayers.includes(playerId);
+    const { homeGoals, awayGoals } = fixture.result || {};
+    if (homeGoals == null || awayGoals == null) return "D";
+    if (homeGoals === awayGoals) return "D";
+    const won = isHome ? homeGoals > awayGoals : awayGoals > homeGoals;
+    return won ? "W" : "L";
+  }
+
+  function cardCurrentValue(card) {
+    const player = byId.player[card.playerId];
+    const fixture = byId.fixture[card.fixtureId];
+    if (!player || !fixture) return 0;
+    if (fixture.status !== "finished" || !fixture.result) return player.basePrice * card.quantity;
+    const stat = fixture.result.stats?.[card.playerId] || {};
+    const teamRes = teamResultForPlayer(card.playerId, fixture);
+    const score = scoreForPlayer(stat, player.pos, teamRes);
+    return newValueFromScore(player.basePrice, score) * card.quantity;
+  }
+
+  const portfolioWithMeta = state.portfolio.map((c) => {
+    const player = byId.player[c.playerId];
+    const fixture = byId.fixture[c.fixtureId];
+    const current = cardCurrentValue(c);
+    const invested = c.boughtPrice * c.quantity;
+    const roi = invested ? (current - invested) / invested : 0;
+    return { ...c, player, fixture, current, invested, roi };
+  });
+
+  const portfolioValueOpen = portfolioWithMeta
+    .filter((c) => !c.soldAt)
+    .reduce((sum, c) => sum + c.current, 0);
+
+  const netWorth = state.balance + portfolioValueOpen;
+
+  // --------------------------- UI ---------------------------
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white font-bold">FS</span>
+            <h1 className="text-xl font-bold">FutStocks — Fantasy ROI</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">
+              Balance: <span className="font-semibold">{state.balance.toLocaleString()}c</span>
+            </div>
+            <div className="hidden sm:block rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">
+              Net Worth: <span className="font-semibold">{netWorth.toLocaleString()}c</span>
+            </div>
+            <button onClick={() => resetGame()} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Reset</button>
+          </div>
+        </div>
+        <nav className="mx-auto max-w-6xl px-4 pb-2">
+          <div className="flex gap-2">
+            <Tab label="Market" value="market" active={tab} onClick={setTab} />
+            <Tab label="My Portfolio" value="portfolio" active={tab} onClick={setTab} />
+            <Tab label="Fixtures" value="fixtures" active={tab} onClick={setTab} />
+            <Tab label="Rules" value="rules" active={tab} onClick={setTab} />
+            <Tab label="Transactions" value="tx" active={tab} onClick={setTab} />
+          </div>
+        </nav>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        {tab === "market" && (
+          <section>
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <select
+                  value={fixtureFilter}
+                  onChange={(e) => setFixtureFilter(e.target.value)}
+                  className="rounded-xl border bg-white px-3 py-2 text-sm shadow-sm"
+                >
+                  <option value="all">All upcoming fixtures</option>
+                  {upcomingFixtures.map((f) => (
+                    <option value={f.id} key={f.id}>
+                      {fmtTeam(f.home, byId.team)} vs {fmtTeam(f.away, byId.team)} — {fmtTime(f.kickoff)}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search player/team/pos..."
+                  className="w-64 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={resolveAllUpcoming} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">Resolve ALL upcoming</button>
+              </div>
+            </div>
+
+            <MarketGrid
+              fixtures={state.fixtures}
+              players={state.players}
+              teams={state.teams}
+              filterFixtureId={fixtureFilter}
+              query={query}
+              onBuy={buyCard}
+            />
+          </section>
+        )}
+
+        {tab === "portfolio" && (
+          <section className="space-y-4">
+            <PortfolioSummary balance={state.balance} netWorth={netWorth} portfolioValueOpen={portfolioValueOpen} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {portfolioWithMeta.length === 0 && (
+                <EmptyCard title="No cards yet" subtitle="Buy cards from the Market before kickoff." />
+              )}
+              {portfolioWithMeta.map((c) => (
+                <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm text-slate-500">{c.player?.pos} • {c.player?.team} • {c.player?.name}</div>
+                      <div className="text-xs text-slate-500">Fixture: {fmtFixture(c.fixture, byId.team)}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm">Bought @ <span className="font-semibold">{(c.boughtPrice * c.quantity).toLocaleString()}c</span></div>
+                      <div className="text-sm">Current: <span className="font-semibold">{c.current.toLocaleString()}c</span></div>
+                      <div className={`text-sm ${c.current - c.invested >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        ROI: {(c.roi * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-xs text-slate-500">
+                      {c.fixture?.status === "finished" ? "Match finished" : "Locked until full-time"}
+                    </div>
+                    <div className="flex gap-2">
+                      {!c.soldAt && c.fixture?.status === "finished" && (
+                        <button onClick={() => sellCard(c.id)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Sell</button>
+                      )}
+                      {c.soldAt && (
+                        <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">Sold @ {c.soldAt.toLocaleString()}c</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tab === "fixtures" && (
+          <section className="space-y-5">
+            {state.fixtures.map((f) => (
+              <FixtureCard
+                key={f.id}
+                fixture={f}
+                playersById={byId.player}
+                teamById={byId.team}
+                onResolve={() => resolveFixture(f.id)}
+                onEditStat={(pid, patch) => editStat(f.id, pid, patch)}
+              />
+            ))}
+          </section>
+        )}
+
+        {tab === "rules" && <RulesCard />}
+
+        {tab === "tx" && (
+          <section className="space-y-2">
+            {state.tx.length === 0 ? (
+              <EmptyCard title="No transactions yet" subtitle="Buys and sells will appear here." />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3">Time</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Amount</th>
+                      <th className="px-4 py-3">Meta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {state.tx.map((t) => (
+                      <tr key={t.id} className="border-t">
+                        <td className="px-4 py-3 text-slate-500">{new Date(t.ts).toLocaleString()}</td>
+                        <td className="px-4 py-3 font-semibold">{t.type}</td>
+                        <td className={`px-4 py-3 ${t.amount >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{t.amount.toLocaleString()}c</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{JSON.stringify(t.meta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+
+      <footer className="mt-8 border-t bg-white/60">
+        <div className="mx-auto max-w-6xl px-4 py-6 text-xs text-slate-500">
+          Built for fun. Not affiliated with any club. All names are placeholders.
+        </div>
+      </footer>
     </div>
-  </section>
+  );
+}
 
-  <header class="sticky top-0 z-50 bg-white bg-opacity-90 backdrop-blur p-4 flex justify-between items-center shadow">
-    <h1 class="text-xl font-bold">PenguCoin</h1>
-    <div class="space-x-4 hidden md:flex">
-      <a href="#home" class="hover:underline">Home</a>
-      <a href="#articles" class="hover:underline">Articles</a>
-      <a href="#about" class="hover:underline">About</a>
-      <a href="#contact" class="hover:underline">Contact</a>
-      <button onclick="toggleDarkMode()" class="bg-gray-200 px-2 py-1 rounded">🌙</button>
+// --------------------------- Small Components ---------------------------
+function Tab({ label, value, active, onClick }) {
+  const isActive = active === value;
+  return (
+    <button
+      onClick={() => onClick(value)}
+      className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+        isActive ? "bg-slate-900 text-white shadow" : "text-slate-700 hover:bg-slate-100"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function EmptyCard({ title, subtitle }) {
+  return (
+    <div className="rounded-2xl border bg-white p-6 text-center shadow-sm">
+      <div className="mx-auto mb-2 h-10 w-10 rounded-2xl bg-slate-100" />
+      <div className="text-sm font-semibold">{title}</div>
+      <div className="text-xs text-slate-500">{subtitle}</div>
     </div>
-  </header>
+  );
+}
 
-  <main class="max-w-4xl mx-auto p-6 space-y-20">
-    <section id="home" class="text-center pt-10">
-      <h2 class="text-5xl font-bold mb-4">PenguCoin</h2>
-      <p class="text-lg text-gray-600">Explore everything Pudgy Penguin-related — from official links to fun comparisons.</p>
-    </section>
+function fmtTeam(id, teamById) { return teamById[id]?.name || id; }
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString();
+}
+function fmtFixture(fxt, teamById) {
+  if (!fxt) return "-";
+  return `${fmtTeam(fxt.home, teamById)} vs ${fmtTeam(fxt.away, teamById)} (${fmtTime(fxt.kickoff)})`;
+}
 
-    <section id="articles" class="space-y-12">
-      <h2 class="text-3xl font-bold mb-4">Articles</h2>
-      <div class="space-y-8">
-        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-          <h3 class="text-xl font-semibold">Official Pudgy Penguins Site</h3>
-          <p class="text-gray-600">This is the official website for the Pudgy Penguins NFT collection.</p>
-          <p class="text-sm text-gray-500">Visit their page to explore the team, vision, and roadmap.</p>
-          <a href="https://pudgypenguins.com/" target="_blank" class="text-blue-600 underline">Read more →</a>
+function MarketGrid({ fixtures, players, teams, filterFixtureId, query, onBuy }) {
+  const teamById = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const fixturesShown = fixtures.filter((f) => f.status === "upcoming" && (filterFixtureId === "all" || filterFixtureId === f.id));
+  const q = query.trim().toLowerCase();
+
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      {fixturesShown.length === 0 && (
+        <EmptyCard title="No upcoming fixtures" subtitle="Resolve some matches or reset the game to add more." />
+      )}
+
+      {fixturesShown.map((f) => (
+        <div key={f.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold">
+              {fmtTeam(f.home, teamById)} <span className="text-slate-400">vs</span> {fmtTeam(f.away, teamById)}
+              <span className="ml-2 text-xs font-normal text-slate-500">Kickoff: {fmtTime(f.kickoff)}</span>
+            </div>
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {[{ side: "Home", ids: f.homePlayers }, { side: "Away", ids: f.awayPlayers }].map((side) => (
+              <div key={side.side} className="rounded-xl border bg-slate-50/60 p-3">
+                <div className="mb-2 text-xs font-semibold text-slate-600">{side.side} Players</div>
+                <div className="space-y-2">
+                  {side.ids
+                    .map((pid) => players.find((p) => p.id === pid))
+                    .filter(Boolean)
+                    .filter((p) =>
+                      q === "" ||
+                      p.name.toLowerCase().includes(q) ||
+                      p.team.toLowerCase().includes(q) ||
+                      p.pos.toLowerCase().includes(q)
+                    )
+                    .map((p) => (
+                      <div key={p.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
+                        <div>
+                          <div className="text-sm font-semibold">{p.name}</div>
+                          <div className="text-xs text-slate-500">{p.pos} • {p.team} • Base {p.basePrice}c</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <QtyBuy onBuy={(qty) => onBuy(p.id, f.id, qty)} price={p.basePrice} />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-          <h3 class="text-xl font-semibold">Official Pudgy Penguins Store</h3>
-          <p class="text-gray-600">Buy plush toys, collectibles, and more from the official Pudgy shop.</p>
-          <p class="text-sm text-gray-500">Perfect for collectors and fans alike.</p>
-          <a href="https://shop.pudgypenguins.com/" target="_blank" class="text-blue-600 underline">Read more →</a>
+      ))}
+    </div>
+  );
+}
+
+function QtyBuy({ onBuy, price }) {
+  const [qty, setQty] = useState(1);
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        min={1}
+        value={qty}
+        onChange={(e) => setQty(Math.max(1, Number(e.target.value || 1)))}
+        className="w-16 rounded-xl border bg-white px-2 py-1 text-sm shadow-sm"
+      />
+      <button onClick={() => onBuy(qty)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">
+        Buy · {(qty * price).toLocaleString()}c
+      </button>
+    </div>
+  );
+}
+
+function FixtureCard({ fixture, playersById, teamById, onResolve, onEditStat }) {
+  const isFinished = fixture.status === "finished";
+  return (
+    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-sm font-semibold">
+            {fmtTeam(fixture.home, teamById)} <span className="text-slate-400">vs</span> {fmtTeam(fixture.away, teamById)}
+          </div>
+          <div className="text-xs text-slate-500">Kickoff: {fmtTime(fixture.kickoff)}</div>
         </div>
-        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-          <h3 class="text-xl font-semibold">What Are Pudgy Penguins?</h3>
-          <p class="text-gray-600">An overview of the NFT project and its growing popularity.</p>
-          <p class="text-sm text-gray-500">Great for newcomers looking to learn more.</p>
-          <a href="https://osl.com/academy/article/what-are-pudgy-penguins" target="_blank" class="text-blue-600 underline">Read more →</a>
-        </div>
-        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-          <h3 class="text-xl font-semibold">Pudgy Penguins vs Dogecoin</h3>
-          <p class="text-gray-600">A fun comparison between meme culture icons in crypto.</p>
-          <p class="text-sm text-gray-500">NFTs vs Coins — which reigns supreme?</p>
-          <a href="https://ca-lab.isca.org.sg/technicalities/pudgy-penguins-versus-dogecoin/" target="_blank" class="text-blue-600 underline">Read more →</a>
-        </div>
-        <div class="bg-white p-6 rounded shadow hover:shadow-lg transition-transform hover:-translate-y-1">
-          <h3 class="text-xl font-semibold">PenguCoin Mention on X</h3>
-          <p class="text-gray-600">Tweet from @husker_eth highlighting PenguCoin.</p>
-          <p class="text-sm text-gray-500">Join the conversation on social media.</p>
-          <a href="https://x.com/husker_eth/status/1936831680842789201" target="_blank" class="text-blue-600 underline">Read more →</a>
+        <div className="flex items-center gap-2">
+          {isFinished ? (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              FT {fixture.result?.homeGoals ?? "-"}:{fixture.result?.awayGoals ?? "-"}
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
+          )}
+          {!isFinished && (
+            <button onClick={onResolve} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700">Resolve</button>
+          )}
         </div>
       </div>
-    </section>
 
-    <section id="about" class="bg-white p-6 rounded shadow">
-      <h2 class="text-2xl font-bold mb-2">About Us</h2>
-      <p class="text-gray-700">This site is a fan-made project to curate info on Pudgy Penguins. We are not affiliated with the official Pudgy Penguins team or brand.</p>
-    </section>
+      {isFinished ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {[{ label: "Home", ids: fixture.homePlayers }, { label: "Away", ids: fixture.awayPlayers }].map((grp) => (
+            <div key={grp.label} className="rounded-xl border bg-slate-50/60 p-3">
+              <div className="mb-2 text-xs font-semibold text-slate-600">{grp.label} Player Stats</div>
+              <div className="space-y-2">
+                {grp.ids.map((pid) => (
+                  <PlayerStatRow
+                    key={pid}
+                    player={playersById[pid]}
+                    stats={fixture.result?.stats?.[pid] || {}}
+                    onEdit={(patch) => onEditStat(pid, patch)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed p-4 text-sm text-slate-500">Stats available after full-time. You can edit stats after resolving (for custom scenarios).</div>
+      )}
+    </div>
+  );
+}
 
-    <section id="contact" class="bg-white p-6 rounded shadow">
-      <h2 class="text-2xl font-bold mb-2">Contact Us</h2>
-      <form action="mailto:pengucoin.io@gmail.com" method="POST" enctype="text/plain" class="space-y-4">
-        <input type="text" name="name" placeholder="Your Name" class="w-full p-2 border rounded" required />
-        <input type="email" name="email" placeholder="Your Email" class="w-full p-2 border rounded" required />
-        <textarea name="message" rows="5" placeholder="Your Message" class="w-full p-2 border rounded" required></textarea>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send Message</button>
-      </form>
-    </section>
+function NumField({ label, value, onChange, min = 0 }) {
+  return (
+    <label className="flex items-center gap-2 text-xs">
+      <span className="w-20 text-slate-500">{label}</span>
+      <input
+        type="number"
+        className="w-20 rounded-lg border bg-white px-2 py-1 shadow-sm"
+        value={value ?? 0}
+        min={min}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
+  );
+}
 
-    <section id="feedback" class="bg-white p-6 rounded shadow">
-      <h2 class="text-2xl font-bold mb-2">Feedback</h2>
-      <form class="space-y-4">
-        <label class="block text-gray-700">Rate your experience:</label>
-        <select class="w-full p-2 border rounded">
-          <option>Excellent</option>
-          <option>Good</option>
-          <option>Average</option>
-          <option>Poor</option>
-        </select>
-        <textarea rows="3" class="w-full p-2 border rounded" placeholder="Any suggestions?"></textarea>
-        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Submit Feedback</button>
-      </form>
-    </section>
-  </main>
+function ToggleField({ label, value, onChange }) {
+  return (
+    <label className="flex items-center gap-2 text-xs">
+      <span className="w-20 text-slate-500">{label}</span>
+      <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} />
+    </label>
+  );
+}
 
-  <footer class="text-center py-6 text-gray-500 text-sm">
-    © 2025 PenguCoin. This site is not affiliated with Pudgy Penguins.
-  </footer>
-</body>
-</html>
+function PlayerStatRow({ player, stats, onEdit }) {
+  const teamResLetter = (r) => (r === true ? "Yes" : r === false ? "No" : "-");
+  return (
+    <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <div className="text-sm font-semibold">{player?.name}</div>
+          <div className="text-xs text-slate-500">{player?.pos} • {player?.team}</div>
+        </div>
+        <div className="text-xs text-slate-500">60+? {teamResLetter((stats?.minutes ?? 0) >= 60)}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <NumField label="Min" value={stats.minutes ?? 0} onChange={(v) => onEdit({ minutes: clamp(v, 0, 120) })} />
+        <NumField label="Goals" value={stats.goals ?? 0} onChange={(v) => onEdit({ goals: Math.max(0, v) })} />
+        <NumField label="Assists" value={stats.assists ?? 0} onChange={(v) => onEdit({ assists: Math.max(0, v) })} />
+        <ToggleField label="CleanSheet" value={!!stats.cleanSheet} onChange={(v) => onEdit({ cleanSheet: !!v })} />
+        <NumField label="Yellow" value={stats.yellow ?? 0} onChange={(v) => onEdit({ yellow: Math.max(0, v) })} />
+        <NumField label="Red" value={stats.red ?? 0} onChange={(v) => onEdit({ red: Math.max(0, v) })} />
+        <NumField label="OwnGoals" value={stats.ownGoals ?? 0} onChange={(v) => onEdit({ ownGoals: Math.max(0, v) })} />
+        <NumField label="PenMiss" value={stats.penMiss ?? 0} onChange={(v) => onEdit({ penMiss: Math.max(0, v) })} />
+        {player?.pos === POS.GK && (
+          <>
+            <NumField label="Saves" value={stats.saves ?? 0} onChange={(v) => onEdit({ saves: Math.max(0, v) })} />
+            <NumField label="PenSaves" value={stats.penSaves ?? 0} onChange={(v) => onEdit({ penSaves: Math.max(0, v) })} />
+          </>
+        )}
+        <NumField label="PenConc" value={stats.penConceded ?? 0} onChange={(v) => onEdit({ penConceded: Math.max(0, v) })} />
+      </div>
+    </div>
+  );
+}
 
+function PortfolioSummary({ balance, netWorth, portfolioValueOpen }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <StatTile label="Balance" value={`${balance.toLocaleString()}c`} />
+      <StatTile label="Open Portfolio" value={`${portfolioValueOpen.toLocaleString()}c`} />
+      <StatTile label="Net Worth" value={`${netWorth.toLocaleString()}c`} />
+    </div>
+  );
+}
+
+function StatTile({ label, value }) {
+  return (
+    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xl font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function RulesCard() {
+  return (
+    <div className="rounded-2xl border bg-white p-6 shadow-sm">
+      <h2 className="mb-3 text-lg font-bold">How it works (Model B)</h2>
+      <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
+        <li>You start with 500 coins. Buy <span className="font-semibold">player cards</span> before their fixtures.</li>
+        <li>When a match finishes, the card value changes based on the player's performance.</li>
+        <li><span className="font-semibold">Profits/losses are unrealized</span> until you hit <em>Sell</em> on a finished card.</li>
+        <li>Your <span className="font-semibold">Net Worth</span> = Balance + Value of all unsold (open) cards.</li>
+      </ol>
+
+      <h3 className="mt-5 text-base font-semibold">Scoring → Value</h3>
+      <div className="text-sm text-slate-700">
+        <p className="mb-2">Points add up from events. Then: <code className="rounded bg-slate-100 px-1">newValue = base × (1 + score/50)</code> (clamped between 0.2× and 3× base).</p>
+        <ul className="list-disc pl-5">
+          <li>Team result: Win +10, Draw +3</li>
+          <li>Minutes: &lt;60 +2, 60–89 +4, 90 +6</li>
+          <li>Goals: FWD +8, MID +10, DEF/GK +12 each</li>
+          <li>Assists: +6 each</li>
+          <li>Clean sheet (DEF/GK, ≥60′, team concedes 0): +8</li>
+          <li>GK saves: +1 per 3 saves; Penalty save +8</li>
+          <li>Cards: Yellow −3, Red −7</li>
+          <li>Own goal −6; Missed pen −5; Pen conceded −5</li>
+        </ul>
+      </div>
+
+      <h3 className="mt-5 text-base font-semibold">Tips</h3>
+      <ul className="list-disc pl-5 text-sm text-slate-700">
+        <li>Diversify across fixtures and positions.</li>
+        <li>For GKs/DEFs, clean sheets move value a lot.</li>
+        <li>Use the <em>Fixtures</em> tab to tweak stats for custom scenarios.</li>
+      </ul>
+    </div>
+  );
+}
