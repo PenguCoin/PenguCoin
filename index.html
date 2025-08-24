@@ -1,452 +1,806 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FutStocks v3 — Premier League (MW3)</title>
-  <!-- Tailwind for quick styling -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React 18 UMD + Babel for in-browser JSX (dev-friendly) -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="min-h-screen bg-slate-50 text-slate-900">
-  <div id="root"></div>
+#!/usr/bin/env bash
+set -e
 
-  <script type="text/babel">
-    const { useState, useMemo, useEffect } = React;
+echo "==> Creating folders"
+mkdir -p src/app/{play/sim,players,leaderboard} src/components src/game src/lib public
 
-    // ---------------- Core helpers ----------------
-    const LS_KEY = "futstocks_state_v3";
-    const POS = { GK:"GK", DEF:"DEF", MID:"MID", FWD:"FWD" };
-    const clamp = (v,min,max)=>Math.min(max,Math.max(min,v));
-    const randInt = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-    const chance = (p)=>Math.random()<p;
+echo "==> Writing src/app/globals.css"
+cat > src/app/globals.css <<'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-    // ---------------- Premier League Teams (subset used in MW3) ----------------
-    const TEAMS = [
-      { id:"CHE", name:"Chelsea" }, { id:"FUL", name:"Fulham" },
-      { id:"MUN", name:"Manchester United" }, { id:"BUR", name:"Burnley" },
-      { id:"SUN", name:"Sunderland" }, { id:"BRE", name:"Brentford" },
-      { id:"TOT", name:"Tottenham Hotspur" }, { id:"BOU", name:"Bournemouth" },
-      { id:"WOL", name:"Wolverhampton Wanderers" }, { id:"EVE", name:"Everton" },
-      { id:"LEE", name:"Leeds United" }, { id:"NEW", name:"Newcastle United" },
-      { id:"BHA", name:"Brighton and Hove Albion" }, { id:"MCI", name:"Manchester City" },
-      { id:"NFO", name:"Nottingham Forest" }, { id:"WHU", name:"West Ham United" },
-      { id:"LIV", name:"Liverpool" }, { id:"ARS", name:"Arsenal" },
-      { id:"AVL", name:"Aston Villa" }, { id:"CRY", name:"Crystal Palace" }
-    ];
+/* ==== FutStocks v5 theme ==== */
+:root{
+  --bg:#14181d;          /* lighter than very dark */
+  --card:#1a2027;        /* clearer contrast */
+  --text:#e8eef5;        /* primary text */
+  --muted:#98a7bb;       /* secondary text */
+  --green:#00FF85;       /* profit */
+  --red:#FF3B30;         /* loss */
+  --blue:#1DA1F2;        /* highlight */
+  --ring:#2c8ed6;        /* focus ring */
+}
 
-    // ---------------- Player Pool (30) ----------------
-    // Base price heuristic by role/status.
-    const P = {
-      starFWD: 150, topFWD: 135, solidFWD: 115,
-      starMID: 140, topMID: 125, solidMID: 110,
-      starDEF: 120, topDEF: 110, solidDEF: 100,
-      starGK: 105
-    };
-    const PLAYERS = [
-      // 1–10
-      { id:"p1", name:"Mohamed Salah", pos:POS.FWD, team:"LIV", basePrice:P.starFWD },
-      { id:"p2", name:"Alexander Isak", pos:POS.FWD, team:"NEW", basePrice:P.topFWD },
-      { id:"p3", name:"Virgil van Dijk", pos:POS.DEF, team:"LIV", basePrice:P.starDEF },
-      { id:"p4", name:"Chris Wood", pos:POS.FWD, team:"NFO", basePrice:P.solidFWD },
-      { id:"p5", name:"Bukayo Saka", pos:POS.FWD, team:"ARS", basePrice:P.starFWD },
-      { id:"p6", name:"Bryan Mbeumo", pos:POS.FWD, team:"BRE", basePrice:P.topFWD },
-      { id:"p7", name:"Matheus Cunha", pos:POS.FWD, team:"WOL", basePrice:P.solidFWD },
-      { id:"p8", name:"Alexis Mac Allister", pos:POS.MID, team:"LIV", basePrice:P.topMID },
-      { id:"p9", name:"Ryan Gravenberch", pos:POS.MID, team:"LIV", basePrice:P.solidMID },
-      { id:"p10", name:"Alisson Becker", pos:POS.GK, team:"LIV", basePrice:P.starGK },
-      // 11–20
-      { id:"p11", name:"Trent Alexander-Arnold", pos:POS.DEF, team:"LIV", basePrice:P.starDEF },
-      { id:"p12", name:"Cole Palmer", pos:POS.MID, team:"CHE", basePrice:P.topMID },
-      { id:"p13", name:"Martin Ødegaard", pos:POS.MID, team:"ARS", basePrice:P.starMID },
-      { id:"p14", name:"Declan Rice", pos:POS.MID, team:"ARS", basePrice:P.topMID },
-      { id:"p15", name:"Jarrod Bowen", pos:POS.FWD, team:"WHU", basePrice:P.topFWD },
-      { id:"p16", name:"Phil Foden", pos:POS.MID, team:"MCI", basePrice:P.starMID },
-      { id:"p17", name:"Ollie Watkins", pos:POS.FWD, team:"AVL", basePrice:P.topFWD },
-      { id:"p18", name:"Heung-min Son", pos:POS.FWD, team:"TOT", basePrice:P.starFWD },
-      { id:"p19", name:"William Saliba", pos:POS.DEF, team:"ARS", basePrice:P.starDEF },
-      { id:"p20", name:"Andrew Robertson", pos:POS.DEF, team:"LIV", basePrice:P.topDEF },
-      // 21–30
-      { id:"p21", name:"Darwin Núñez", pos:POS.FWD, team:"LIV", basePrice:P.topFWD },
-      { id:"p22", name:"Bruno Fernandes", pos:POS.MID, team:"MUN", basePrice:P.starMID },
-      { id:"p23", name:"Dominic Solanke", pos:POS.FWD, team:"BOU", basePrice:P.topFWD },
-      { id:"p24", name:"Jack Grealish", pos:POS.MID, team:"MCI", basePrice:P.topMID },
-      { id:"p25", name:"Diogo Jota", pos:POS.FWD, team:"LIV", basePrice:P.topFWD },
-      { id:"p26", name:"James Maddison", pos:POS.MID, team:"TOT", basePrice:P.topMID },
-      { id:"p27", name:"Joško Gvardiol", pos:POS.DEF, team:"MCI", basePrice:P.topDEF },
-      { id:"p28", name:"Luis Díaz", pos:POS.FWD, team:"LIV", basePrice:P.topFWD },
-      { id:"p29", name:"Cristian Romero", pos:POS.DEF, team:"TOT", basePrice:P.topDEF },
-      { id:"p30", name:"Kai Havertz", pos:POS.MID, team:"ARS", basePrice:P.topMID },
-    ];
+html,body{ background:var(--bg); color:var(--text); }
+*{ @apply antialiased; }
 
-    // ---------------- Matchweek 3 Fixtures (times in UTC for demo) ----------------
-    const FIXTURES = [
-      { id:"mw3-1", home:"CHE", away:"FUL", kickoff:"2025-08-30T04:30:00Z", status:"upcoming", homePlayers:["p12"], awayPlayers:[], result:null },
-      { id:"mw3-2", home:"MUN", away:"BUR", kickoff:"2025-08-30T07:00:00Z", status:"upcoming", homePlayers:["p22"], awayPlayers:[], result:null },
-      { id:"mw3-3", home:"SUN", away:"BRE", kickoff:"2025-08-30T07:00:00Z", status:"upcoming", homePlayers:[], awayPlayers:["p6"], result:null },
-      { id:"mw3-4", home:"TOT", away:"BOU", kickoff:"2025-08-30T07:00:00Z", status:"upcoming", homePlayers:["p18","p26","p29"], awayPlayers:["p23"], result:null },
-      { id:"mw3-5", home:"WOL", away:"EVE", kickoff:"2025-08-30T07:00:00Z", status:"upcoming", homePlayers:["p7"], awayPlayers:[], result:null },
-      { id:"mw3-6", home:"LEE", away:"NEW", kickoff:"2025-08-30T09:30:00Z", status:"upcoming", homePlayers:[], awayPlayers:["p2"], result:null },
-      { id:"mw3-7", home:"BHA", away:"MCI", kickoff:"2025-08-31T06:00:00Z", status:"upcoming", homePlayers:[], awayPlayers:["p16","p24","p27"], result:null },
-      { id:"mw3-8", home:"NFO", away:"WHU", kickoff:"2025-08-31T06:00:00Z", status:"upcoming", homePlayers:["p4"], awayPlayers:["p15"], result:null },
-      { id:"mw3-9", home:"LIV", away:"ARS", kickoff:"2025-08-31T08:30:00Z", status:"upcoming", homePlayers:["p1","p3","p8","p9","p10","p11","p20","p21","p25","p28"], awayPlayers:["p5","p13","p14","p19","p30"], result:null },
-      { id:"mw3-10", home:"AVL", away:"CRY", kickoff:"2025-08-31T11:00:00Z", status:"upcoming", homePlayers:["p17"], awayPlayers:[], result:null },
-    ];
+@layer components{
+  .card{ @apply rounded-2xl bg-[var(--card)] shadow p-4; }
+  .btn{ @apply inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition select-none; }
+  .btn-primary{ @apply bg-[var(--blue)] text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed; }
+  .btn-success{ @apply bg-[var(--green)] text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed; }
+  .btn-ghost{ @apply bg-[var(--card)] text-[var(--muted)] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed; }
+  .input{ @apply w-full rounded-xl bg-black/20 border border-white/10 px-3 py-2 outline-none focus:ring-2 focus:ring-[var(--ring)]; }
+  .subtle{ @apply text-xs text-[var(--muted)]; }
+  .truncate-1{ @apply truncate; }
+}
+EOF
 
-    // ---------------- Scoring & simulation ----------------
-    function scoreForPlayer(stat,pos,teamResult){
-      let s=0; if(teamResult==='W') s+=10; else if(teamResult==='D') s+=3;
-      if(stat.minutes>=90) s+=6; else if(stat.minutes>=60) s+=4; else if(stat.minutes>0) s+=2;
-      const goalPts = pos===POS.FWD?8: pos===POS.MID?10: 12; s += goalPts*(stat.goals||0);
-      s += 6*(stat.assists||0);
-      if((pos===POS.DEF||pos===POS.GK) && stat.minutes>=60 && stat.cleanSheet) s+=8;
-      if(pos===POS.GK){ s+=Math.floor((stat.saves||0)/3); s+=8*(stat.penSaves||0); }
-      s -= 3*(stat.yellow||0); s -= 7*(stat.red||0); s -= 6*(stat.ownGoals||0); s -= 5*(stat.penMiss||0); s -= 5*(stat.penConceded||0);
-      return s;
-    }
-    const newValueFromScore=(base,score)=>Math.round(clamp(base*(1+score/50), base*0.2, base*3));
-    function randomStatline(pos,gf,ga){
-      const minutes = chance(0.1)?0: chance(0.15)?randInt(1,59): chance(0.35)?randInt(60,89): 90;
-      let goals=0,assists=0,yellow=0,red=0,ownGoals=0,penMiss=0,penSaves=0,saves=0,penConceded=0;
-      if(minutes>0){
-        if(pos===POS.FWD) goals = chance(0.35)?1: chance(0.12)?2: chance(0.03)?3: 0;
-        if(pos===POS.MID) goals = chance(0.18)?1: chance(0.05)?2: 0;
-        if(pos===POS.DEF) goals = chance(0.08)?1: 0;
-        assists = chance(0.25)?1: chance(0.07)?2: 0;
-        yellow = chance(0.15)?1:0; red = yellow? (chance(0.05)?1:0) : (chance(0.02)?1:0);
-        ownGoals = chance(0.01)?1:0; penMiss = chance(0.03)?1:0;
-        if(pos===POS.GK){ saves=randInt(0,9); penSaves = chance(0.05)?1:0; }
-        else if(pos===POS.DEF){ penConceded = chance(0.03)?1:0; }
-        else if(pos===POS.MID){ penConceded = chance(0.02)?1:0; }
-        else { penConceded = chance(0.01)?1:0; }
-      }
-      const cleanSheet = minutes>=60 && ga===0;
-      return { minutes, goals, assists, yellow, red, ownGoals, penMiss, penSaves, saves, penConceded, cleanSheet };
-    }
+echo "==> Writing src/app/layout.tsx"
+cat > src/app/layout.tsx <<'EOF'
+import type { Metadata } from "next";
+import "./globals.css";
 
-    // ---------------- State ----------------
-    function loadState(){ try{ const raw=localStorage.getItem(LS_KEY); return raw?JSON.parse(raw):null; }catch{ return null; } }
-    function saveState(s){ try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch{} }
+export const metadata: Metadata = {
+  title: "FutStocks v5",
+  description: "Fantasy football investing — web game",
+};
 
-    function App(){
-      const [state,setState] = useState(()=> loadState() || ({ balance:500, players:PLAYERS, teams:TEAMS, fixtures:FIXTURES, portfolio:[], tx:[] }));
-      const [tab,setTab] = useState("market");
-      const [fixtureFilter,setFixtureFilter] = useState("all");
-      const [query,setQuery] = useState("");
-      useEffect(()=>saveState(state), [state]);
-
-      const byId = useMemo(()=>({
-        player:Object.fromEntries(state.players.map(p=>[p.id,p])),
-        team:Object.fromEntries(state.teams.map(t=>[t.id,t])),
-        fixture:Object.fromEntries(state.fixtures.map(f=>[f.id,f]))
-      }),[state.players,state.teams,state.fixtures]);
-
-      const upcoming = state.fixtures.filter(f=>f.status==='upcoming');
-
-      function buyCard(playerId, fixtureId, qty=1){
-        const p=byId.player[playerId]; const f=byId.fixture[fixtureId]; if(!p||!f||f.status!=='upcoming') return;
-        const cost=p.basePrice*qty; if(state.balance<cost) return alert('Not enough coins.');
-        const item={ id:`card_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, playerId, fixtureId, boughtPrice:p.basePrice, quantity:qty, soldAt:null };
-        setState(s=>({ ...s, balance:s.balance-cost, portfolio:[item,...s.portfolio], tx:[{id:`tx_${Date.now()}`, type:'BUY', amount:-cost, ts:new Date().toISOString(), meta:{playerId,fixtureId,qty}}, ...s.tx] }));
-      }
-      function sellCard(cardId){
-        const card=state.portfolio.find(c=>c.id===cardId); if(!card||card.soldAt) return;
-        const player=byId.player[card.playerId]; const fixture=byId.fixture[card.fixtureId]; if(!fixture||fixture.status!=='finished') return alert('Match not finished yet.');
-        const stat=fixture.result?.stats?.[card.playerId]||{}; const teamRes=teamResultForPlayer(card.playerId, fixture); const score=scoreForPlayer(stat, player.pos, teamRes);
-        const current=newValueFromScore(player.basePrice, score)*card.quantity;
-        setState(s=>({ ...s, balance:s.balance+current, portfolio:s.portfolio.map(c=>c.id===cardId?{...c, soldAt:current}:c), tx:[{id:`tx_${Date.now()}`, type:'SELL', amount:current, ts:new Date().toISOString(), meta:{cardId}}, ...s.tx] }));
-      }
-      function resolveFixture(fixtureId){
-        const idx=state.fixtures.findIndex(f=>f.id===fixtureId); if(idx===-1) return; const f=state.fixtures[idx]; if(f.status==='finished') return;
-        const homeGoals=randInt(0,4), awayGoals=randInt(0,4); const stats={};
-        const all=[...f.homePlayers, ...f.awayPlayers];
-        for(const pid of all){ const p=byId.player[pid]; const isHome=f.homePlayers.includes(pid); const gf=isHome?homeGoals:awayGoals; const ga=isHome?awayGoals:homeGoals; stats[pid]=randomStatline(p.pos,gf,ga); }
-        const updated={ ...f, status:'finished', result:{ homeGoals, awayGoals, stats } };
-        setState(s=>({ ...s, fixtures:s.fixtures.map((fx,i)=> i===idx?updated:fx) }));
-      }
-      function resolveAll(){ for(const f of state.fixtures.filter(x=>x.status==='upcoming')) resolveFixture(f.id); }
-      function resetGame(){ if(!confirm('Reset all progress?')) return; setState({ balance:500, players:PLAYERS, teams:TEAMS, fixtures:FIXTURES, portfolio:[], tx:[] }); }
-      function editStat(fixId, pid, patch){ setState(s=>({ ...s, fixtures:s.fixtures.map(f=>{ if(f.id!==fixId || !f.result) return f; const next={...(f.result.stats||{})}; next[pid]={ ...(next[pid]||{}), ...patch }; return { ...f, result:{...f.result, stats:next} }; }) })); }
-
-      function teamResultForPlayer(pid, fixture){ const isHome=fixture.homePlayers.includes(pid); const {homeGoals,awayGoals}=fixture.result||{}; if(homeGoals==null||awayGoals==null) return 'D'; if(homeGoals===awayGoals) return 'D'; const won=isHome?homeGoals>awayGoals:awayGoals>homeGoals; return won?'W':'L'; }
-      function cardCurrentValue(card){ const player=byId.player[card.playerId]; const fixture=byId.fixture[card.fixtureId]; if(!player||!fixture) return 0; if(fixture.status!=='finished'||!fixture.result) return player.basePrice*card.quantity; const stat=fixture.result.stats?.[card.playerId]||{}; const teamRes=teamResultForPlayer(card.playerId, fixture); const score=scoreForPlayer(stat, player.pos, teamRes); return newValueFromScore(player.basePrice, score)*card.quantity; }
-
-      const portfolioWithMeta = state.portfolio.map(c=>{ const player=byId.player[c.playerId]; const fixture=byId.fixture[c.fixtureId]; const current=cardCurrentValue(c); const invested=c.boughtPrice*c.quantity; const roi=invested? (current-invested)/invested : 0; return { ...c, player, fixture, current, invested, roi }; });
-      const portfolioValueOpen = portfolioWithMeta.filter(c=>!c.soldAt).reduce((s,c)=>s+c.current,0);
-      const netWorth = state.balance + portfolioValueOpen;
-
-      return (
-        <div>
-          <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white font-bold">FS</span>
-                <h1 className="text-xl font-bold">FutStocks v3 — Premier League</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Balance: <span className="font-semibold">{state.balance.toLocaleString()}c</span></div>
-                <div className="hidden sm:block rounded-xl border bg-white px-3 py-1.5 text-sm shadow-sm">Net Worth: <span className="font-semibold">{netWorth.toLocaleString()}c</span></div>
-                <button onClick={resetGame} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Reset</button>
-              </div>
-            </div>
-            <nav className="mx-auto max-w-6xl px-4 pb-2">
-              <div className="flex gap-2">
-                <Tab label="Market" value="market" active={tab} onClick={setTab} />
-                <Tab label="Portfolio" value="portfolio" active={tab} onClick={setTab} />
-                <Tab label="Fixtures" value="fixtures" active={tab} onClick={setTab} />
-                <Tab label="Rules" value="rules" active={tab} onClick={setTab} />
-                <Tab label="Transactions" value="tx" active={tab} onClick={setTab} />
-              </div>
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1DA1F2" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
+      <body className="min-h-screen">
+        <main className="max-w-md mx-auto px-4 pb-28">{children}</main>
+        <footer className="fixed bottom-0 inset-x-0">
+          <div className="max-w-md mx-auto px-4 pb-4">
+            <nav className="rounded-2xl bg-[var(--card)]/90 backdrop-blur shadow-lg p-2 flex justify-between">
+              <a className="btn btn-ghost px-3 py-2" href="/">Home</a>
+              <a className="btn btn-ghost px-3 py-2" href="/play/sim">Play</a>
+              <a className="btn btn-ghost px-3 py-2" href="/players">Players</a>
+              <a className="btn btn-ghost px-3 py-2" href="/leaderboard">Leaderboard</a>
             </nav>
-          </header>
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}
+EOF
 
-          <main className="mx-auto max-w-6xl px-4 py-6">
-            {tab==='market' && (
-              <section>
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-2">
-                    <select value={fixtureFilter} onChange={(e)=>setFixtureFilter(e.target.value)} className="rounded-xl border bg-white px-3 py-2 text-sm shadow-sm">
-                      <option value="all">All MW3 fixtures</option>
-                      {upcoming.map(f=> <option key={f.id} value={f.id}>{fmtTeam(f.home,byId.team)} vs {fmtTeam(f.away,byId.team)} — {fmtTime(f.kickoff)}</option>)}
-                    </select>
-                    <input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search player/team/pos..." className="w-64 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm" />
-                  </div>
-                  <button onClick={resolveAll} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">Resolve ALL</button>
-                </div>
-                <MarketGrid fixtures={state.fixtures} players={state.players} teams={state.teams} filterFixtureId={fixtureFilter} query={query} onBuy={buyCard} />
-              </section>
-            )}
-
-            {tab==='portfolio' && (
-              <section className="space-y-4">
-                <PortfolioSummary balance={state.balance} netWorth={netWorth} portfolioValueOpen={portfolioValueOpen} />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {portfolioWithMeta.length===0 && <EmptyCard title="No cards yet" subtitle="Buy cards from the Market before kickoff." />}
-                  {portfolioWithMeta.map(c=> (
-                    <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm text-slate-500">{c.player?.pos} • {c.player?.team} • {c.player?.name}</div>
-                          <div className="text-xs text-slate-500">Fixture: {fmtFixture(c.fixture, byId.team)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm">Bought @ <span className="font-semibold">{(c.boughtPrice*c.quantity).toLocaleString()}c</span></div>
-                          <div className="text-sm">Current: <span className="font-semibold">{c.current.toLocaleString()}c</span></div>
-                          <div className={`text-sm ${c.current-c.invested>=0? 'text-emerald-600':'text-rose-600'}`}>ROI: {(c.roi*100).toFixed(1)}%</div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-slate-500">{c.fixture?.status==='finished'? 'Match finished' : 'Locked until full-time'}</div>
-                        <div className="flex gap-2">
-                          {!c.soldAt && c.fixture?.status==='finished' && (
-                            <button onClick={()=>sellCard(c.id)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Sell</button>
-                          )}
-                          {c.soldAt && <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">Sold @ {c.soldAt.toLocaleString()}c</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {tab==='fixtures' && (
-              <section className="space-y-5">
-                {state.fixtures.map(f=> (
-                  <FixtureCard key={f.id} fixture={f} playersById={byId.player} teamById={byId.team} onResolve={()=>resolveFixture(f.id)} onEditStat={(pid,patch)=>editStat(f.id,pid,patch)} />
-                ))}
-              </section>
-            )}
-
-            {tab==='rules' && <RulesCard />}
-
-            {tab==='tx' && (
-              <section className="space-y-2">
-                {state.tx.length===0 ? (
-                  <EmptyCard title="No transactions yet" subtitle="Buys and sells will appear here." />
-                ) : (
-                  <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 text-left text-slate-600"><tr><th className="px-4 py-3">Time</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Meta</th></tr></thead>
-                      <tbody>
-                        {state.tx.map(t=> (
-                          <tr key={t.id} className="border-t">
-                            <td className="px-4 py-3 text-slate-500">{new Date(t.ts).toLocaleString()}</td>
-                            <td className="px-4 py-3 font-semibold">{t.type}</td>
-                            <td className={`px-4 py-3 ${t.amount>=0?'text-emerald-700':'text-rose-700'}`}>{t.amount.toLocaleString()}c</td>
-                            <td className="px-4 py-3 text-slate-500 text-xs">{JSON.stringify(t.meta)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-            )}
-          </main>
-
-          <footer className="mt-8 border-t bg-white/60"><div className="mx-auto max-w-6xl px-4 py-6 text-xs text-slate-500">FutStocks v3 — Premier League only. Demo data; not affiliated with the Premier League or clubs.</div></footer>
-        </div>
-      );
-    }
-
-    // ---------------- Small components ----------------
-    function Tab({label,value,active,onClick}){ const isActive=active===value; return <button onClick={()=>onClick(value)} className={`rounded-xl px-3 py-2 text-sm font-medium transition ${isActive? 'bg-slate-900 text-white shadow' : 'text-slate-700 hover:bg-slate-100'}`}>{label}</button>; }
-    function EmptyCard({title,subtitle}){ return (<div className="rounded-2xl border bg-white p-6 text-center shadow-sm"><div className="mx-auto mb-2 h-10 w-10 rounded-2xl bg-slate-100" /><div className="text-sm font-semibold">{title}</div><div className="text-xs text-slate-500">{subtitle}</div></div>); }
-    const fmtTeam=(id,teamById)=>teamById[id]?.name||id; const fmtTime=(iso)=>new Date(iso).toLocaleString(); const fmtFixture=(f,teamById)=>!f?'-':`${fmtTeam(f.home,teamById)} vs ${fmtTeam(f.away,teamById)} (${fmtTime(f.kickoff)})`;
-
-    // Collapsible list utility: show first N, rest hidden behind toggle
-    function CollapsibleList({ items, topN=10, renderItem }){
-      const [open,setOpen]=useState(false);
-      const head = items.slice(0, topN);
-      const tail = items.slice(topN);
-      return (
-        <div className="space-y-2">
-          {head.map(renderItem)}
-          {tail.length>0 && (
-            <details className="rounded-xl bg-white/40 p-2" open={open} onToggle={(e)=>setOpen(e.target.open)}>
-              <summary className="cursor-pointer text-xs font-semibold text-slate-600 select-none">{open? 'Show fewer players' : `Show ${tail.length} more players`}</summary>
-              <div className="mt-2 space-y-2">{tail.map(renderItem)}</div>
-            </details>
-          )}
-        </div>
-      );
-    }
-
-    function MarketGrid({ fixtures, players, teams, filterFixtureId, query, onBuy }){
-      const teamById = Object.fromEntries(teams.map(t=>[t.id,t]));
-      const fixturesShown = fixtures.filter(f=> f.status==='upcoming' && (filterFixtureId==='all' || filterFixtureId===f.id));
-      const q=(query||'').trim().toLowerCase();
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {fixturesShown.length===0 && <EmptyCard title="No upcoming fixtures" subtitle="Reset or add fixtures." />}
-          {fixturesShown.map(f=> (
-            <div key={f.id} className="rounded-2xl border bg-white p-4 shadow-sm">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold">{fmtTeam(f.home,teamById)} <span className="text-slate-400">vs</span> {fmtTeam(f.away,teamById)}<span className="ml-2 text-xs font-normal text-slate-500">Kickoff: {fmtTime(f.kickoff)}</span></div>
-                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {[{ side:'Home', ids:f.homePlayers }, { side:'Away', ids:f.awayPlayers }].map(side => {
-                  const sidePlayers = side.ids.map(pid=>players.find(p=>p.id===pid)).filter(Boolean).filter(p=> q==='' || p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q));
-                  return (
-                    <div key={side.side} className="rounded-xl border bg-slate-50/60 p-3">
-                      <div className="mb-2 text-xs font-semibold text-slate-600">{side.side} Players</div>
-                      <CollapsibleList items={sidePlayers} topN={10} renderItem={(p)=> (
-                        <div key={p.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
-                          <div>
-                            <div className="text-sm font-semibold">{p.name}</div>
-                            <div className="text-xs text-slate-500">{p.pos} • {p.team} • Base {p.basePrice}c</div>
-                          </div>
-                          <QtyBuy onBuy={(qty)=>onBuy(p.id, f.id, qty)} price={p.basePrice} />
-                        </div>
-                      )} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    function QtyBuy({onBuy, price}){ const [qty,setQty]=useState(1); return (
-      <div className="flex items-center gap-2">
-        <input type="number" min={1} value={qty} onChange={(e)=>setQty(Math.max(1,Number(e.target.value||1)))} className="w-16 rounded-xl border bg-white px-2 py-1 text-sm shadow-sm" />
-        <button onClick={()=>onBuy(qty)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Buy · {(qty*price).toLocaleString()}c</button>
+echo "==> Writing src/app/page.tsx"
+cat > src/app/page.tsx <<'EOF'
+export default function Home() {
+  return (
+    <section className="mt-12 text-center">
+      <h1 className="text-4xl font-black">FutStocks v5</h1>
+      <p className="mt-2 text-[var(--muted)]">Pick a team & player, run a 1‑minute sim, earn coins from performance.</p>
+      <div className="mt-6 space-x-2">
+        <a className="btn btn-primary" href="/play/sim">Play Quick Sim</a>
+        <a className="btn btn-ghost" href="/players">Browse Players</a>
       </div>
-    ); }
+      <div className="mt-10 card text-left">
+        <h2 className="text-xl font-bold mb-1">How it works</h2>
+        <ul className="list-disc pl-5 subtle leading-6">
+          <li>Start with 1,000 coins</li>
+          <li>Select a Big Six team and player</li>
+          <li>Play a 1‑minute simulated match (events stream live)</li>
+          <li>MPS (0–100) → payout = 100 × (1 + (MPS − 50)/100)</li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+EOF
 
-    function FixtureCard({ fixture, playersById, teamById, onResolve, onEditStat }){
-      const isFinished = fixture.status==='finished';
-      return (
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold">{fmtTeam(fixture.home,teamById)} <span className="text-slate-400">vs</span> {fmtTeam(fixture.away,teamById)}</div>
-              <div className="text-xs text-slate-500">Kickoff: {fmtTime(fixture.kickoff)}</div>
+echo "==> Writing src/app/leaderboard/page.tsx"
+cat > src/app/leaderboard/page.tsx <<'EOF'
+export default function LeaderboardPage() {
+  return (
+    <section className="mt-8">
+      <h2 className="text-2xl font-bold mb-3">Leaderboard</h2>
+      <div className="card"><p className="subtle">Coming soon: weekly & all‑time rankings.</p></div>
+    </section>
+  );
+}
+EOF
+
+echo "==> Writing src/app/players/page.tsx"
+cat > src/app/players/page.tsx <<'EOF'
+"use client";
+import { useMemo, useState } from "react";
+import { ALL_TEAMS, ROSTERS, type Player } from "../../lib/rosters";
+
+export default function PlayersPage(){
+  const [team, setTeam] = useState<string>("Arsenal");
+  const [q, setQ] = useState("");
+
+  const list = useMemo(()=>{
+    const src = ROSTERS[team] || [];
+    if(!q.trim()) return src;
+    const t = q.toLowerCase();
+    return src.filter(p => p.name.toLowerCase().includes(t) || (p.posLabel||"").toLowerCase().includes(t));
+  },[team,q]);
+
+  return (
+    <section className="mt-6">
+      <h2 className="text-2xl font-bold mb-3">Players</h2>
+      <div className="card">
+        <div className="flex gap-2">
+          <select className="input" value={team} onChange={e=>setTeam(e.target.value)}>
+            {ALL_TEAMS.map(t=> <option key={t}>{t}</option>)}
+          </select>
+          <input className="input" placeholder="Search name or role…" value={q} onChange={e=>setQ(e.target.value)}/>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {list.map((p:Player)=>(
+          <div key={`${p.team}-${p.name}`} className="card flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-black/20 grid place-items-center text-sm">{p.pos}</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold truncate-1">{p.name}</div>
+              <div className="subtle truncate-1">{p.team} • {p.posLabel || p.pos}</div>
             </div>
-            <div className="flex items-center gap-2">
-              {isFinished ? (
-                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">FT {fixture.result?.homeGoals ?? '-'}:{fixture.result?.awayGoals ?? '-'}</span>
+            <div className="subtle">{p.age ? `${p.age}` : ""}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+EOF
+
+echo "==> Writing src/app/play/sim/page.tsx"
+cat > src/app/play/sim/page.tsx <<'EOF'
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { getCoins, setCoins, ensureInit, getSelection, setSelection } from "../../../lib/store";
+import { mps as computeMps, payoutFromMps, type Stats } from "../../../game/scoring";
+import { generateSim } from "../../../game/simulate";
+import GameHUD from "../../../components/GameHUD";
+import EventFeed from "../../../components/EventFeed";
+import TeamPicker from "../../../components/TeamPicker";
+import { ROSTERS, ALL_TEAMS, type Player } from "../../../lib/rosters";
+
+export default function SimPage() {
+  const [coins, setCoinsState] = useState<number>(1000);
+  const [running, setRunning] = useState(false);
+  const [timer, setTimer] = useState(60);
+  const [events, setEvents] = useState<{ t:number; text:string; delta?:number }[]>([]);
+  const [previewScore, setPreviewScore] = useState(50);
+  const [roundResult, setRoundResult] = useState<null | { score:number; payout:number; stats:Stats }>(null);
+
+  // selection
+  const [team, setTeam] = useState<string>(getSelection().team || ALL_TEAMS[0]);
+  const [player, setPlayer] = useState<Player | null>(null);
+
+  // load coins & selection
+  useEffect(() => { 
+    ensureInit(); 
+    setCoinsState(getCoins()); 
+    const sel = getSelection(); 
+    if(sel.playerName){ 
+      const p = (ROSTERS[sel.team]||[]).find(x=>x.name===sel.playerName) || null; 
+      setPlayer(p);
+    } 
+  }, []);
+
+  // countdown timer
+  useEffect(() => {
+    if (!running || timer<=0) return;
+    const id = setTimeout(()=> setTimer(t=>t-1), 1000);
+    return ()=> clearTimeout(id);
+  }, [running, timer]);
+
+  // available players for selected team
+  const teamPlayers = useMemo(()=> ROSTERS[team] || [], [team]);
+
+  const canPlay = useMemo(()=> !running && coins >= 100 && !!player, [running, coins, player]);
+
+  const startRound = async () => {
+    if (!player) return;
+    setRunning(true);
+    setRoundResult(null);
+    setTimer(60);
+    setEvents([]);
+    setPreviewScore(50);
+
+    // persist selection
+    setSelection({team, playerName: player.name});
+
+    // spend up front
+    const spent = coins - 100;
+    setCoins(spent); setCoinsState(spent);
+
+    const seed = Date.now();
+    const sim = generateSim(seed, player.pos, player.name);
+    const stepMs = Math.floor(60000 / Math.max(1, sim.events.length));
+    let i=0;
+    const pushNext = () => {
+      if(i>=sim.events.length) return finalize();
+      const ev = sim.events[i++];
+      setEvents(prev=>[...prev, ev]);
+      if(typeof ev.delta === "number"){
+        setPreviewScore(s => Math.max(0, Math.min(100, s + ev.delta)));
+      }
+      setTimeout(pushNext, stepMs);
+    };
+
+    const finalize = () => {
+      const score = computeMps(sim.playerStats);
+      const payout = payoutFromMps(score, 100);
+      setRoundResult({ score, payout, stats: sim.playerStats });
+      const credited = spent + payout;
+      setCoins(credited); setCoinsState(credited);
+      setRunning(false);
+      setTimer(0);
+    };
+
+    setTimeout(pushNext, 350);
+  };
+
+  return (
+    <section className="mt-6">
+      <GameHUD coins={coins} running={running} timer={timer} score={previewScore} />
+      <div className="mt-4 grid gap-3">
+        <TeamPicker
+          team={team}
+          setTeam={(t)=>{ setTeam(t); setPlayer(null); }}
+          players={teamPlayers}
+          player={player}
+          setPlayer={setPlayer}
+          disabled={running}
+        />
+
+        <div className="card">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold">Quick Sim</h2>
+              <p className="subtle">1‑minute round • Buy price: 100 coins</p>
+              {player ? (
+                <p className="subtle mt-1">Selected: <b>{player.name}</b> ({player.team}, {player.pos})</p>
               ) : (
-                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
+                <p className="subtle mt-1">Pick a team & player to start.</p>
               )}
-              {!isFinished && <button onClick={onResolve} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700">Resolve</button>}
             </div>
-          </div>
-          {isFinished ? (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {[{label:'Home', ids:fixture.homePlayers},{label:'Away', ids:fixture.awayPlayers}].map(grp=> (
-                <div key={grp.label} className="rounded-xl border bg-slate-50/60 p-3">
-                  <div className="mb-2 text-xs font-semibold text-slate-600">{grp.label} Player Stats</div>
-                  <div className="space-y-2">
-                    {grp.ids.map(pid=> (
-                      <PlayerStatRow key={pid} player={playersById[pid]} stats={fixture.result?.stats?.[pid]||{}} onEdit={(patch)=>onEditStat(pid, patch)} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed p-4 text-sm text-slate-500">Stats after full-time. You can edit stats after resolving for custom scenarios.</div>
-          )}
-        </div>
-      );
-    }
-
-    function NumField({label,value,onChange,min=0}){ return (
-      <label className="flex items-center gap-2 text-xs"><span className="w-20 text-slate-500">{label}</span><input type="number" className="w-20 rounded-lg border bg-white px-2 py-1 shadow-sm" value={value??0} min={min} onChange={(e)=>onChange(Number(e.target.value))} /></label>
-    ); }
-    function ToggleField({label,value,onChange}){ return (
-      <label className="flex items-center gap-2 text-xs"><span className="w-20 text-slate-500">{label}</span><input type="checkbox" checked={!!value} onChange={(e)=>onChange(e.target.checked)} /></label>
-    ); }
-    function PlayerStatRow({ player, stats, onEdit }){
-      const sixty=(stats?.minutes??0)>=60;
-      return (
-        <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-2 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold">{player?.name}</div>
-              <div className="text-xs text-slate-500">{player?.pos} • {player?.team}</div>
-            </div>
-            <div className="text-xs text-slate-500">60+? {sixty? 'Yes':'No'}</div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <NumField label="Min" value={stats.minutes??0} onChange={(v)=>onEdit({ minutes: clamp(v,0,120) })} />
-            <NumField label="Goals" value={stats.goals??0} onChange={(v)=>onEdit({ goals: Math.max(0,v) })} />
-            <NumField label="Assists" value={stats.assists??0} onChange={(v)=>onEdit({ assists: Math.max(0,v) })} />
-            <ToggleField label="CleanSheet" value={!!stats.cleanSheet} onChange={(v)=>onEdit({ cleanSheet: !!v })} />
-            <NumField label="Yellow" value={stats.yellow??0} onChange={(v)=>onEdit({ yellow: Math.max(0,v) })} />
-            <NumField label="Red" value={stats.red??0} onChange={(v)=>onEdit({ red: Math.max(0,v) })} />
-            <NumField label="OwnGoals" value={stats.ownGoals??0} onChange={(v)=>onEdit({ ownGoals: Math.max(0,v) })} />
-            <NumField label="PenMiss" value={stats.penMiss??0} onChange={(v)=>onEdit({ penMiss: Math.max(0,v) })} />
-            {player?.pos===POS.GK && <>
-              <NumField label="Saves" value={stats.saves??0} onChange={(v)=>onEdit({ saves: Math.max(0,v) })} />
-              <NumField label="PenSaves" value={stats.penSaves??0} onChange={(v)=>onEdit({ penSaves: Math.max(0,v) })} />
-            </>}
-            <NumField label="PenConc" value={stats.penConceded??0} onChange={(v)=>onEdit({ penConceded: Math.max(0,v) })} />
+            <button
+              className="btn btn-primary"
+              onClick={startRound}
+              disabled={!canPlay}
+              aria-disabled={!canPlay}
+            >
+              {running ? "Running…" : !player ? "Select player" : coins<100 ? "Not enough coins" : "Play Round"}
+            </button>
           </div>
         </div>
-      );
+
+        <EventFeed events={events} />
+
+        <div className="card">
+          <h3 className="font-semibold mb-2">Result</h3>
+          {roundResult ? (
+            <div className="grid gap-1">
+              <div className="flex justify-between"><span className="subtle">MPS</span><span className="font-semibold">{roundResult.score}</span></div>
+              <div className="flex justify-between">
+                <span className="subtle">Payout</span>
+                <span className={roundResult.payout>=100 ? "text-[var(--green)] font-semibold":"text-[var(--red)] font-semibold"}>
+                  {roundResult.payout} coins {roundResult.payout>=100? " (+)":" (−)"}{Math.abs(roundResult.payout-100)}
+                </span>
+              </div>
+              <div className="subtle mt-2">
+                Team result: <b>{roundResult.stats.result}</b> • Goals: <b>{roundResult.stats.goals}</b> • Assists: <b>{roundResult.stats.assists}</b> • Pos: <b>{roundResult.stats.pos}</b>
+              </div>
+            </div>
+          ) : <p className="subtle">Start a round to see your payout.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+EOF
+
+echo "==> Writing src/components/GameHUD.tsx"
+cat > src/components/GameHUD.tsx <<'EOF'
+type Props = { coins:number; running:boolean; timer:number; score:number; };
+
+export default function GameHUD({ coins, running, timer, score }: Props){
+  const timePct = Math.max(0, Math.min(100, (60 - timer) / 60 * 100));
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-[120px]">
+          <div className="subtle">Coins</div>
+          <div className="text-2xl font-black truncate-1">{coins}</div>
+        </div>
+        <div className="flex-1">
+          <div className="subtle mb-1 flex justify-between">
+            <span>Round</span>
+            <span>MPS {Math.round(score)}</span>
+          </div>
+          <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden">
+            <div className="h-full bg-[var(--blue)]" style={{ width: `${timePct}%` }} />
+          </div>
+          <div className="subtle mt-1">{running ? `${timer}s remaining` : "ready"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+EOF
+
+echo "==> Writing src/components/EventFeed.tsx"
+cat > src/components/EventFeed.tsx <<'EOF'
+import { useEffect, useRef } from "react";
+export type FeedEvent = { t:number; text:string; delta?:number };
+
+const iconFor = (text:string) => {
+  if(text.includes("GOAL")) return "⚽";
+  if(text.includes("Assist")) return "🎯";
+  if(text.includes("Yellow")) return "🟨";
+  if(text.includes("Red ")) return "🟥";
+  if(text.includes("Tackle") || text.includes("Interception")) return "🛡️";
+  if(text.includes("Own goal") || text.includes("Error")) return "⚠️";
+  return "•";
+};
+
+export default function EventFeed({ events }: { events: FeedEvent[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(()=>{ ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior:"smooth" }); },[events]);
+
+  return (
+    <div className="card">
+      <h3 className="font-semibold mb-2">Match Events</h3>
+      <div ref={ref} className="max-h-64 overflow-auto pr-1">
+        {events.length===0 && <p className="subtle">No events yet. Start a round!</p>}
+        <ul className="space-y-1">
+          {events.map((e,i)=>(
+            <li key={i} className="flex items-center gap-2">
+              <span className="w-9 subtle">{e.t}&apos;</span>
+              <span>{iconFor(e.text)}</span>
+              <span className="flex-1">{e.text}</span>
+              {typeof e.delta==="number" && (
+                <span className={e.delta>=0? "text-[var(--green)]":"text-[var(--red)]"}>
+                  {e.delta>0?`+${e.delta}`:`${e.delta}`}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+EOF
+
+echo "==> Writing src/components/TeamPicker.tsx"
+cat > src/components/TeamPicker.tsx <<'EOF'
+"use client";
+import { ALL_TEAMS, type Player } from "../lib/rosters";
+
+export default function TeamPicker({
+  team, setTeam, players, player, setPlayer, disabled
+}:{
+  team:string; setTeam:(t:string)=>void;
+  players:Player[]; player:Player|null; setPlayer:(p:Player|null)=>void;
+  disabled?:boolean;
+}) {
+  return (
+    <div className="card">
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {ALL_TEAMS.map(t=>(
+          <button key={t}
+            onClick={()=>!disabled && setTeam(t)}
+            disabled={disabled}
+            className={`btn ${team===t ? "btn-primary" : "btn-ghost"} whitespace-nowrap`}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-2 mt-2">
+        {players.map(p=>(
+          <button key={`${p.team}-${p.name}`} disabled={disabled}
+            onClick={()=> setPlayer(p)}
+            className={`w-full p-3 rounded-xl text-left flex items-center gap-3 border
+              ${player?.name===p.name ? "border-[var(--blue)] bg-black/20" : "border-white/10 bg-black/10"}`}>
+            <div className="h-9 w-9 rounded-full bg-black/20 grid place-items-center">{p.pos}</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold truncate-1">{p.name}</div>
+              <div className="subtle truncate-1">{p.team} • {p.posLabel || p.pos}{p.age?` • ${p.age}`:""}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+EOF
+
+echo "==> Writing src/game/scoring.ts"
+cat > src/game/scoring.ts <<'EOF'
+export type Pos = "F"|"M"|"D"|"GK";
+export type Stats = {
+  result: "win" | "draw" | "loss",
+  mins: number,
+  goals: number,
+  assists: number,
+  keyPasses: number,
+  defActions: number,
+  yc: boolean,
+  rc: boolean,
+  ownGoal: boolean,
+  error: boolean,
+  pos: Pos,
+};
+
+export function mps(s: Stats) {
+  let score = 50;
+  if (s.result === "win") score += 8;
+  else if (s.result === "draw") score += 2;
+  else score -= 6;
+
+  score += Math.min(90, s.mins) * 0.05; // +0..4.5
+  const goalBonus = s.pos === "F" ? 10 : s.pos === "M" ? 12 : s.pos === "D" ? 15 : 20;
+  score += goalBonus * s.goals;
+  score += 6 * s.assists;
+  score += Math.min(4, s.keyPasses);
+  score += Math.min(8, s.defActions * 0.8);
+  if (s.yc) score -= 5;
+  if (s.rc) score -= 12;
+  if (s.ownGoal) score -= 10;
+  if (s.error) score -= 10;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+export function payoutFromMps(score: number, buy = 100) {
+  return Math.round(buy * (1 + (score - 50) / 100));
+}
+EOF
+
+echo "==> Writing src/game/simulate.ts"
+cat > src/game/simulate.ts <<'EOF'
+import type { Pos, Stats } from "./scoring";
+
+export type SimEvent = { t: number; text: string; delta?: number };
+export type SimResult = { events: SimEvent[]; playerStats: Stats };
+
+function mulberry32(a: number) {
+  return function () {
+    let t = (a += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Generate events based on a player's position; UI will play them over ~60s */
+export function generateSim(seed: number, pos: Pos, playerName="Your player"): SimResult {
+  const rnd = mulberry32(seed);
+  const events: SimEvent[] = [];
+  let minute = 0;
+  let gf = 0, ga = 0;
+  let goals = 0, assists = 0, keyPasses = 0, defActions = 0;
+  let yc = false, rc = false, ownGoal = false, error = false;
+
+  // base rates per position (roughly)
+  const pGoal = pos==="F"? 0.08 : pos==="M"? 0.04 : pos==="D"? 0.02 : 0.01;
+  const pAssist = pos==="F"? 0.03 : pos==="M"? 0.05 : pos==="D"? 0.02 : 0.01;
+  const pKey   = pos==="F"? 0.04 : pos==="M"? 0.07 : pos==="D"? 0.02 : 0.02;
+  const pDef   = pos==="F"? 0.02 : pos==="M"? 0.03 : pos==="D"? 0.06 : 0.02;
+
+  const push = (text: string, delta?: number) => {
+    events.push({ t: Math.min(90, minute), text, delta });
+  };
+
+  while (minute < 90) {
+    minute += Math.max(1, Math.floor(rnd() * 5)); // 1–4 minute jumps
+    const roll = rnd();
+
+    if (roll < pGoal) {
+      gf++; goals++;
+      push(`${minute}' GOAL! ${playerName} scores`, pos==="F"? +10 : pos==="M"? +12 : pos==="D"? +15 : +20);
+      if (rnd() < pAssist*1.2){ assists++; push(`${minute}' Assist awarded to ${playerName}`, +6); }
     }
+    else if (roll < pGoal + 0.06) {
+      ga++; push(`${minute}' Opponent scores`);
+    }
+    else if (roll < pGoal + 0.06 + pKey) {
+      keyPasses++; push(`${minute}' Key pass by ${playerName}`, +1);
+    }
+    else if (roll < pGoal + 0.06 + pKey + pDef) {
+      defActions++; push(`${minute}' Defensive action by ${playerName}`, +0.8);
+    }
+    else if (roll < 0.38 && !yc) {
+      yc = true; push(`${minute}' Yellow card for ${playerName}`, -5);
+    }
+    else if (roll < 0.40 && !rc) {
+      rc = true; push(`${minute}' Red card for ${playerName}`, -12);
+    }
+    else if (roll < 0.42 && !ownGoal) {
+      ownGoal = true; ga++; push(`${minute}' Own goal (credited against)`, -10);
+    }
+    else if (roll < 0.46 && !error) {
+      error = true; ga++; push(`${minute}' Error leading to goal`, -10);
+    }
+    else {
+      if (rnd() < 0.2) push(`${minute}' Safe possession`);
+    }
+  }
 
-    function PortfolioSummary({ balance, netWorth, portfolioValueOpen }){ return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3"><StatTile label="Balance" value={`${balance.toLocaleString()}c`} /><StatTile label="Open Portfolio" value={`${portfolioValueOpen.toLocaleString()}c`} /><StatTile label="Net Worth" value={`${netWorth.toLocaleString()}c`} /></div>
-    ); }
-    function StatTile({label,value}){ return (<div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="text-xs text-slate-500">{label}</div><div className="text-xl font-semibold">{value}</div></div>); }
-    function RulesCard(){ return (
-      <div className="rounded-2xl border bg-white p-6 shadow-sm"><h2 className="mb-3 text-lg font-bold">How it works (Model B)</h2><ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700"><li>Start with 500 coins. Buy player cards before fixtures.</li><li>After full-time, card value updates by performance.</li><li>Profit/loss is realized only when you Sell.</li><li>Net Worth = Balance + value of open cards.</li></ol><h3 className="mt-5 text-base font-semibold">Scoring → Value</h3><ul className="list-disc pl-5 text-sm text-slate-700"><li>Team result: Win +10, Draw +3</li><li>Minutes: &lt;60 +2, 60–89 +4, 90 +6</li><li>Goals: FWD +8, MID +10, DEF/GK +12</li><li>Assists: +6</li><li>Clean sheet (DEF/GK, ≥60′): +8</li><li>GK: +1 per 3 saves; Pen save +8</li><li>Cards: Yellow −3, Red −7; OG −6; Missed pen −5; Conceded pen −5</li></ul></div>
-    ); }
+  const teamResult: Stats["result"] = gf > ga ? "win" : gf === ga ? "draw" : "loss";
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-</body>
-</html>
+  const playerStats: Stats = {
+    result: teamResult,
+    mins: 90,
+    goals,
+    assists,
+    keyPasses,
+    defActions,
+    yc,
+    rc,
+    ownGoal,
+    error,
+    pos,
+  };
+
+  return { events, playerStats };
+}
+EOF
+
+echo "==> Writing src/lib/store.ts"
+cat > src/lib/store.ts <<'EOF'
+const COINS_KEY = "futstocks.v5.coins";
+const SEL_KEY = "futstocks.v5.selection";
+
+export function ensureInit() {
+  if (typeof window === "undefined") return;
+  if (!localStorage.getItem(COINS_KEY)) localStorage.setItem(COINS_KEY, JSON.stringify(1000));
+  if (!localStorage.getItem(SEL_KEY)) localStorage.setItem(SEL_KEY, JSON.stringify({ team:"Arsenal", playerName:"" }));
+}
+
+export function getCoins(): number {
+  if (typeof window === "undefined") return 1000;
+  const raw = localStorage.getItem(COINS_KEY);
+  return raw ? JSON.parse(raw) : 1000;
+}
+
+export function setCoins(v: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(COINS_KEY, JSON.stringify(Math.max(0, Math.round(v))));
+}
+
+export function getSelection(): {team:string; playerName:string} {
+  if (typeof window === "undefined") return { team:"Arsenal", playerName:"" };
+  const raw = localStorage.getItem(SEL_KEY);
+  return raw ? JSON.parse(raw) : { team:"Arsenal", playerName:"" };
+}
+
+export function setSelection(sel:{team:string; playerName:string}) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SEL_KEY, JSON.stringify(sel));
+}
+EOF
+
+echo "==> Writing src/lib/rosters.ts"
+cat > src/lib/rosters.ts <<'EOF'
+// FutStocks v5 — Big Six rosters (2025/26)
+// Pos: "GK" | "D" | "M" | "F"
+
+export type Player = {
+  team: string;
+  name: string;
+  pos: "GK"|"D"|"M"|"F";
+  posLabel?: string;
+  age?: number;
+};
+
+const UTD: Player[] = [
+  {team:"Manchester United", name:"Altay Bayındır", pos:"GK", age:27},
+  {team:"Manchester United", name:"André Onana", pos:"GK", age:29},
+  {team:"Manchester United", name:"Tom Heaton", pos:"GK", age:38},
+  {team:"Manchester United", name:"Diogo Dalot", pos:"D", posLabel:"RB", age:26},
+  {team:"Manchester United", name:"Noussair Mazraoui", pos:"D", posLabel:"RB", age:27},
+  {team:"Manchester United", name:"Matthijs de Ligt", pos:"D", posLabel:"CB", age:26},
+  {team:"Manchester United", name:"Harry Maguire", pos:"D", posLabel:"CB", age:32},
+  {team:"Manchester United", name:"Lisandro Martínez", pos:"D", posLabel:"CB", age:27},
+  {team:"Manchester United", name:"Leny Yoro", pos:"D", posLabel:"CB", age:19},
+  {team:"Manchester United", name:"Patrick Dorgu", pos:"D", posLabel:"LB", age:20},
+  {team:"Manchester United", name:"Luke Shaw", pos:"D", posLabel:"LB", age:30},
+  {team:"Manchester United", name:"Ayden Heaven", pos:"D", age:18},
+  {team:"Manchester United", name:"Tyler Fredricson", pos:"D", age:20},
+  {team:"Manchester United", name:"Harry Amass", pos:"D", posLabel:"LB", age:17},
+  {team:"Manchester United", name:"Mason Mount", pos:"M", age:26},
+  {team:"Manchester United", name:"Bruno Fernandes", pos:"M", posLabel:"AM (C)", age:30},
+  {team:"Manchester United", name:"Casemiro", pos:"M", posLabel:"DM", age:33},
+  {team:"Manchester United", name:"Manuel Ugarte", pos:"M", posLabel:"DM", age:24},
+  {team:"Manchester United", name:"Kobbie Mainoo", pos:"M", posLabel:"CM", age:20},
+  {team:"Manchester United", name:"Rasmus Højlund", pos:"F", posLabel:"ST", age:22},
+  {team:"Manchester United", name:"Matheus Cunha", pos:"F", age:26},
+  {team:"Manchester United", name:"Joshua Zirkzee", pos:"F", posLabel:"ST", age:24},
+  {team:"Manchester United", name:"Amad Diallo", pos:"F", posLabel:"W", age:23},
+  {team:"Manchester United", name:"Alejandro Garnacho", pos:"F", posLabel:"W", age:21},
+  {team:"Manchester United", name:"Bryan Mbeumo", pos:"F", posLabel:"W/F", age:26},
+  {team:"Manchester United", name:"Benjamin Šeško", pos:"F", posLabel:"ST", age:22},
+  {team:"Manchester United", name:"Chido Obi", pos:"F", age:17},
+];
+
+const CITY: Player[] = [
+  {team:"Manchester City", name:"James Trafford", pos:"GK", age:22},
+  {team:"Manchester City", name:"Marcus Bettinelli", pos:"GK", age:33},
+  {team:"Manchester City", name:"Stefan Ortega", pos:"GK", age:32},
+  {team:"Manchester City", name:"Ederson", pos:"GK", age:32},
+  {team:"Manchester City", name:"Rúben Dias", pos:"D", posLabel:"CB", age:28},
+  {team:"Manchester City", name:"John Stones", pos:"D", posLabel:"CB/RB/DM", age:31},
+  {team:"Manchester City", name:"Nathan Aké", pos:"D", posLabel:"CB/LB", age:30},
+  {team:"Manchester City", name:"Rayan Aït-Nouri", pos:"D", posLabel:"LB", age:24},
+  {team:"Manchester City", name:"Joško Gvardiol", pos:"D", posLabel:"CB/LB", age:23},
+  {team:"Manchester City", name:"Manuel Akanji", pos:"D", posLabel:"CB/RB/LB/DM", age:30},
+  {team:"Manchester City", name:"Abdukodir Khusanov", pos:"D", posLabel:"CB/RB", age:21},
+  {team:"Manchester City", name:"Rico Lewis", pos:"D", posLabel:"RB/DM", age:20},
+  {team:"Manchester City", name:"Joshua Wilson-Esbrand", pos:"D", posLabel:"LB", age:22},
+  {team:"Manchester City", name:"Tijjani Reijnders", pos:"M", age:27},
+  {team:"Manchester City", name:"Mateo Kovačić", pos:"M", age:31},
+  {team:"Manchester City", name:"Rayan Cherki", pos:"M", posLabel:"AM/RW", age:22},
+  {team:"Manchester City", name:"Jérémy Doku", pos:"F", posLabel:"RW/LW", age:23},
+  {team:"Manchester City", name:"Nico González", pos:"M", age:23},
+  {team:"Manchester City", name:"Rodri", pos:"M", posLabel:"DM/CM", age:29},
+  {team:"Manchester City", name:"İlkay Gündoğan", pos:"M", posLabel:"CM/DM", age:34},
+  {team:"Manchester City", name:"Bernardo Silva", pos:"M", posLabel:"CM/AM/W (C)", age:31},
+  {team:"Manchester City", name:"Savinho", pos:"F", posLabel:"RW/LW", age:21},
+  {team:"Manchester City", name:"Matheus Nunes", pos:"M", posLabel:"CM/AM", age:27},
+  {team:"Manchester City", name:"Nico O'Reilly", pos:"M", posLabel:"CM/AM", age:20},
+  {team:"Manchester City", name:"Kalvin Phillips", pos:"M", posLabel:"DM/CM", age:29},
+  {team:"Manchester City", name:"Phil Foden", pos:"F", posLabel:"AM/W/ST", age:25},
+  {team:"Manchester City", name:"Oscar Bobb", pos:"F", posLabel:"RW/ST", age:22},
+  {team:"Manchester City", name:"Omar Marmoush", pos:"F", posLabel:"ST/AM/W", age:26},
+  {team:"Manchester City", name:"Erling Haaland", pos:"F", posLabel:"ST", age:25},
+];
+
+const ARS: Player[] = [
+  {team:"Arsenal", name:"David Raya", pos:"GK", age:29},
+  {team:"Arsenal", name:"Kepa Arrizabalaga", pos:"GK", age:30},
+  {team:"Arsenal", name:"William Saliba", pos:"D", posLabel:"CB", age:24},
+  {team:"Arsenal", name:"Cristhian Mosquera", pos:"D", posLabel:"CB", age:21},
+  {team:"Arsenal", name:"Ben White", pos:"D", posLabel:"RB/CB", age:27},
+  {team:"Arsenal", name:"Gabriel Magalhães", pos:"D", posLabel:"CB", age:27},
+  {team:"Arsenal", name:"Jurriën Timber", pos:"D", posLabel:"CB/FB", age:24},
+  {team:"Arsenal", name:"Jakub Kiwior", pos:"D", posLabel:"CB/LB", age:25},
+  {team:"Arsenal", name:"Oleksandr Zinchenko", pos:"D", posLabel:"LB/MF", age:28},
+  {team:"Arsenal", name:"Riccardo Calafiori", pos:"D", posLabel:"LB/CB", age:23},
+  {team:"Arsenal", name:"Martin Ødegaard", pos:"M", posLabel:"AM (C)", age:26},
+  {team:"Arsenal", name:"Christian Nørgaard", pos:"M", posLabel:"DM", age:31},
+  {team:"Arsenal", name:"Fábio Vieira", pos:"M", age:25},
+  {team:"Arsenal", name:"Ethan Nwaneri", pos:"M", posLabel:"MF/FW", age:18},
+  {team:"Arsenal", name:"Mikel Merino", pos:"M", posLabel:"CM", age:29},
+  {team:"Arsenal", name:"Albert Sambi Lokonga", pos:"M", age:25},
+  {team:"Arsenal", name:"Martín Zubimendi", pos:"M", posLabel:"DM", age:26},
+  {team:"Arsenal", name:"Declan Rice", pos:"M", posLabel:"DM/CM", age:26},
+  {team:"Arsenal", name:"Bukayo Saka", pos:"F", posLabel:"RW/FW", age:23},
+  {team:"Arsenal", name:"Gabriel Jesus", pos:"F", age:28},
+  {team:"Arsenal", name:"Eberechi Eze", pos:"F", posLabel:"AM/W", age:27},
+  {team:"Arsenal", name:"Gabriel Martinelli", pos:"F", posLabel:"LW/FW", age:24},
+  {team:"Arsenal", name:"Viktor Gyökeres", pos:"F", posLabel:"ST", age:27},
+  {team:"Arsenal", name:"Leandro Trossard", pos:"F", posLabel:"W/FW", age:30},
+  {team:"Arsenal", name:"Noni Madueke", pos:"F", posLabel:"W", age:23},
+  {team:"Arsenal", name:"Reiss Nelson", pos:"F", posLabel:"W", age:25},
+  {team:"Arsenal", name:"Kai Havertz", pos:"F", posLabel:"AM/FW", age:26},
+  {team:"Arsenal", name:"Max Dowman", pos:"F", posLabel:"MF/FW", age:16},
+];
+
+const LIV: Player[] = [
+  {team:"Liverpool", name:"Alisson Becker", pos:"GK", age:32},
+  {team:"Liverpool", name:"Caoimhín Kelleher", pos:"GK", age:26},
+  {team:"Liverpool", name:"Vítězslav Jaroš", pos:"GK", age:24},
+  {team:"Liverpool", name:"Trent Alexander-Arnold", pos:"D", posLabel:"RB/MF", age:26},
+  {team:"Liverpool", name:"Conor Bradley", pos:"D", posLabel:"RB", age:22},
+  {team:"Liverpool", name:"Ibrahima Konaté", pos:"D", posLabel:"CB", age:26},
+  {team:"Liverpool", name:"Virgil van Dijk", pos:"D", posLabel:"CB", age:34},
+  {team:"Liverpool", name:"Jarell Quansah", pos:"D", posLabel:"CB", age:22},
+  {team:"Liverpool", name:"Joe Gomez", pos:"D", posLabel:"CB/FB", age:28},
+  {team:"Liverpool", name:"Andrew Robertson", pos:"D", posLabel:"LB", age:31},
+  {team:"Liverpool", name:"Kostas Tsimikas", pos:"D", posLabel:"LB", age:29},
+  {team:"Liverpool", name:"Alexis Mac Allister", pos:"M", posLabel:"CM", age:26},
+  {team:"Liverpool", name:"Dominik Szoboszlai", pos:"M", posLabel:"AM", age:24},
+  {team:"Liverpool", name:"Curtis Jones", pos:"M", posLabel:"CM", age:24},
+  {team:"Liverpool", name:"Ryan Gravenberch", pos:"M", posLabel:"CM", age:23},
+  {team:"Liverpool", name:"Wataru Endō", pos:"M", posLabel:"DM", age:32},
+  {team:"Liverpool", name:"Stefan Bajčetić", pos:"M", posLabel:"DM", age:20},
+  {team:"Liverpool", name:"Harvey Elliott", pos:"M", posLabel:"MF/W", age:22},
+  {team:"Liverpool", name:"Mohamed Salah", pos:"F", posLabel:"RW/FW", age:33},
+  {team:"Liverpool", name:"Cody Gakpo", pos:"F", age:26},
+  {team:"Liverpool", name:"Jayden Danns", pos:"F", posLabel:"ST", age:19},
+];
+
+const CHE: Player[] = [
+  {team:"Chelsea", name:"Robert Sánchez", pos:"GK", age:27},
+  {team:"Chelsea", name:"Djordje Petrović", pos:"GK", age:25},
+  {team:"Chelsea", name:"Gabriel Slonina", pos:"GK", age:21},
+  {team:"Chelsea", name:"Reece James", pos:"D", posLabel:"RB", age:25},
+  {team:"Chelsea", name:"Malo Gusto", pos:"D", posLabel:"RB", age:22},
+  {team:"Chelsea", name:"Wesley Fofana", pos:"D", posLabel:"CB", age:24},
+  {team:"Chelsea", name:"Levi Colwill", pos:"D", posLabel:"CB", age:22},
+  {team:"Chelsea", name:"Trevoh Chalobah", pos:"D", posLabel:"CB", age:26},
+  {team:"Chelsea", name:"Axel Disasi", pos:"D", posLabel:"CB", age:27},
+  {team:"Chelsea", name:"Benoît Badiashile", pos:"D", posLabel:"CB", age:24},
+  {team:"Chelsea", name:"Marc Cucurella", pos:"D", posLabel:"LB", age:27},
+  {team:"Chelsea", name:"Ben Chilwell", pos:"D", posLabel:"LB", age:28},
+  {team:"Chelsea", name:"Ian Maatsen", pos:"D", posLabel:"LB/WB", age:23},
+  {team:"Chelsea", name:"Enzo Fernández", pos:"M", posLabel:"CM", age:24},
+  {team:"Chelsea", name:"Moisés Caicedo", pos:"M", posLabel:"DM", age:23},
+  {team:"Chelsea", name:"Conor Gallagher", pos:"M", posLabel:"CM", age:25},
+  {team:"Chelsea", name:"Carney Chukwuemeka", pos:"M", age:21},
+  {team:"Chelsea", name:"Cesare Casadei", pos:"M", age:22},
+  {team:"Chelsea", name:"Romeo Lavia", pos:"M", posLabel:"DM", age:21},
+  {team:"Chelsea", name:"Lesley Ugochukwu", pos:"M", age:21},
+  {team:"Chelsea", name:"Raheem Sterling", pos:"F", posLabel:"W", age:30},
+  {team:"Chelsea", name:"Mykhailo Mudryk", pos:"F", posLabel:"W", age:24},
+  {team:"Chelsea", name:"Christopher Nkunku", pos:"F", age:27},
+  {team:"Chelsea", name:"Cole Palmer", pos:"F", posLabel:"AM/W", age:23},
+  {team:"Chelsea", name:"Nicolas Jackson", pos:"F", posLabel:"ST", age:24},
+  {team:"Chelsea", name:"Deivid Washington", pos:"F", age:20},
+  {team:"Chelsea", name:"Omari Hutchinson", pos:"F", posLabel:"W", age:21},
+];
+
+const TOT: Player[] = [
+  {team:"Tottenham", name:"Guglielmo Vicario", pos:"GK", age:28},
+  {team:"Tottenham", name:"Fraser Forster", pos:"GK", age:37},
+  {team:"Tottenham", name:"Brandon Austin", pos:"GK", age:26},
+  {team:"Tottenham", name:"Pedro Porro", pos:"D", posLabel:"RB/WB", age:25},
+  {team:"Tottenham", name:"Emerson Royal", pos:"D", posLabel:"RB", age:26},
+  {team:"Tottenham", name:"Cristian Romero", pos:"D", posLabel:"CB", age:27},
+  {team:"Tottenham", name:"Micky van de Ven", pos:"D", posLabel:"CB", age:24},
+  {team:"Tottenham", name:"Radu Drăgușin", pos:"D", posLabel:"CB", age:23},
+  {team:"Tottenham", name:"Ashley Phillips", pos:"D", posLabel:"CB", age:20},
+  {team:"Tottenham", name:"Destiny Udogie", pos:"D", posLabel:"LB/WB", age:22},
+  {team:"Tottenham", name:"Ben Davies", pos:"D", posLabel:"LB/CB", age:32},
+  {team:"Tottenham", name:"Yves Bissouma", pos:"M", posLabel:"DM", age:28},
+  {team:"Tottenham", name:"Rodrigo Bentancur", pos:"M", posLabel:"CM", age:28},
+  {team:"Tottenham", name:"Pape Matar Sarr", pos:"M", posLabel:"CM", age:22},
+  {team:"Tottenham", name:"Pierre-Emile Højbjerg", pos:"M", posLabel:"CM", age:30},
+  {team:"Tottenham", name:"James Maddison", pos:"M", posLabel:"AM", age:28},
+  {team:"Tottenham", name:"Giovani Lo Celso", pos:"M", posLabel:"AM", age:29},
+  {team:"Tottenham", name:"Oliver Skipp", pos:"M", posLabel:"CM", age:24},
+  {team:"Tottenham", name:"Heung-min Son", pos:"F", posLabel:"FW/W", age:33},
+  {team:"Tottenham", name:"Dejan Kulusevski", pos:"F", posLabel:"W/FW", age:25},
+  {team:"Tottenham", name:"Richarlison", pos:"F", age:28},
+  {team:"Tottenham", name:"Brennan Johnson", pos:"F", posLabel:"FW/W", age:24},
+  {team:"Tottenham", name:"Manor Solomon", pos:"F", posLabel:"W", age:26},
+  {team:"Tottenham", name:"Dane Scarlett", pos:"F", posLabel:"ST", age:21},
+];
+
+export const ROSTERS: Record<string, Player[]> = {
+  "Manchester United": UTD,
+  "Manchester City": CITY,
+  "Arsenal": ARS,
+  "Liverpool": LIV,
+  "Chelsea": CHE,
+  "Tottenham": TOT,
+};
+
+export const ALL_TEAMS = Object.keys(ROSTERS);
+EOF
+
+echo "==> Writing public/manifest.json"
+cat > public/manifest.json <<'EOF'
+{
+  "name": "FutStocks v5",
+  "short_name": "FutStocks",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14181d",
+  "theme_color": "#1DA1F2",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+EOF
+
+echo "==> Done! Now run:  npm run dev"
 
 
