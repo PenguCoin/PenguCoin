@@ -3,13 +3,27 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FutStocks — Matchweek 3 (Fractional Shares)</title>
+  <title>FutStocks — Matchweek 3 (Fractional, Fees, Toast)</title>
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 18 UMD + Babel -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @keyframes toastIn {
+      0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    }
+    .toast-enter { animation: toastIn 200ms ease-out forwards; }
+    .toast-leave { animation: toastOut 180ms ease-in forwards; }
+    .press-anim:active { transform: scale(0.98); }
+  </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">
   <div id="root"></div>
@@ -18,16 +32,18 @@
     const { useEffect, useMemo, useState } = React;
 
     // --------------------------- Helpers ---------------------------
-    const LS_KEY = "futstocks_state_mw3_fractional_v1";
+    const LS_KEY = "futstocks_state_mw3_fractional_v2";
     const POS = { GK:"GK", DEF:"DEF", MID:"MID", FWD:"FWD" };
+    const TX_FEE = 20; // $20 flat fee per transaction (buy AND sell)
     const clamp = (v,min,max)=> Math.min(max, Math.max(min, v));
     const randInt = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
     const chance = (p)=> Math.random() < p;
+    const $fmt = (n)=> `$${Number(n||0).toLocaleString()}`;
 
     const loadState = () => { try { const raw = localStorage.getItem(LS_KEY); return raw? JSON.parse(raw): null; } catch { return null; } };
     const saveState = (s) => { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {} };
 
-    // --------------------------- Teams (from your fixtures) ---------------------------
+    // --------------------------- Teams ---------------------------
     const TEAMS = [
       { id:"AVL", name:"Aston Villa" },
       { id:"CRY", name:"Crystal Palace" },
@@ -51,21 +67,15 @@
       { id:"ARS", name:"Arsenal" },
     ];
 
-    // --------------------------- Base price tiering ---------------------------
-    // Map a rough “tier score” to 150 / 200 / 250 / 300
-    const tierPrice = (tier=0) => {
-      if (tier >= 20) return 300;    // elite
-      if (tier >= 10) return 250;    // strong starter
-      if (tier >= 0)  return 200;    // regular
-      return 150;                    // prospect/squad
-    };
+    // --------------------------- Price tiers ---------------------------
+    const tierPrice = (tier=0) => (tier>=20?300 : tier>=10?250 : tier>=0?200 : 150);
 
     // --------------------------- Player factory ---------------------------
     let __pid = 1; const pid = () => `p${__pid++}`;
     const P = (name,pos,team,tier=0)=>({ id: pid(), name, pos, team, basePrice: tierPrice(tier) });
 
-    // --------------------------- Big Six (your lists, mapped to tiers) ---------------------------
-    // MANCHESTER UNITED
+    // --------------------------- Big Six players (from your list, tiered) ---------------------------
+    // MUN
     const MUN = [
       P("Altay Bayındır", POS.GK, "MUN", 0),
       P("André Onana", POS.GK, "MUN", 10),
@@ -96,7 +106,7 @@
       P("Chido Obi", POS.FWD, "MUN", -10),
     ];
 
-    // MANCHESTER CITY
+    // MCI
     const MCI = [
       P("James Trafford", POS.GK, "MCI", 0),
       P("Marcus Bettinelli", POS.GK, "MCI", -10),
@@ -129,7 +139,7 @@
       P("Erling Haaland", POS.FWD, "MCI", 25),
     ];
 
-    // ARSENAL
+    // ARS
     const ARS = [
       P("David Raya", POS.GK, "ARS", 15),
       P("Kepa Arrizabalaga", POS.GK, "ARS", 10),
@@ -161,7 +171,7 @@
       P("Max Dowman", POS.MID, "ARS", -10),
     ];
 
-    // LIVERPOOL
+    // LIV
     const LIV = [
       P("Alisson Becker", POS.GK, "LIV", 20),
       P("Caoimhín Kelleher", POS.GK, "LIV", 10),
@@ -189,7 +199,7 @@
       P("Jayden Danns", POS.FWD, "LIV", -10),
     ];
 
-    // CHELSEA
+    // CHE
     const CHE = [
       P("Robert Sánchez", POS.GK, "CHE", 10),
       P("Djordje Petrović", POS.GK, "CHE", 10),
@@ -220,7 +230,7 @@
       P("Omari Hutchinson", POS.FWD, "CHE", 10),
     ];
 
-    // TOTTENHAM
+    // TOT
     const TOT = [
       P("Guglielmo Vicario", POS.GK, "TOT", 15),
       P("Fraser Forster", POS.GK, "TOT", -10),
@@ -250,7 +260,7 @@
 
     const BIG6_PLAYERS = [...MUN, ...MCI, ...ARS, ...LIV, ...CHE, ...TOT];
 
-    // Minimal placeholders for the other fixture teams
+    // Minimal squads for other fixture teams
     const addMini = (teamId, label) => ([
       P(`${label} GK`, POS.GK, teamId, 0),
       P(`${label} RB`, POS.DEF, teamId, 0),
@@ -351,14 +361,15 @@
       return { minutes, goals, assists, yellow, red, ownGoals, penMiss, penSaves, saves, penConceded, cleanSheet };
     }
 
-    // --------------------------- UI helpers ---------------------------
+    // --------------------------- UI utils ---------------------------
     const fmtTeam = (id, teamById)=> teamById[id]?.name || id;
     const fmtTime = (iso)=> new Date(iso).toLocaleString();
 
     function Tab({label,value,active,onClick}){
       const isActive = active===value;
       return (
-        <button onClick={()=>onClick(value)} className={`px-3 py-1.5 rounded ${isActive? "bg-slate-900 text-white":"bg-white border"}`}>
+        <button onClick={()=>onClick(value)}
+          className={`px-3 py-1.5 rounded transition press-anim ${isActive? "bg-slate-900 text-white":"bg-white border hover:bg-slate-100"}`}>
           {label}
         </button>
       );
@@ -391,6 +402,18 @@
       );
     }
 
+    // --------------------------- Toast ---------------------------
+    function Toast({ show, children }){
+      const cls = `fixed bottom-4 left-1/2 -translate-x-1/2 pointer-events-none`;
+      return (
+        <div className={cls}>
+          <div className={`rounded-full bg-slate-900 text-white px-4 py-2 text-sm shadow-lg ${show? "toast-enter":"toast-leave"}`}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
     // --------------------------- Fractional share selector ---------------------------
     function ShareSelector({ value, onChange }){
       const opts = [0.25, 0.5, 0.75, 1.0];
@@ -399,7 +422,7 @@
           {opts.map(v=>(
             <button key={v}
               onClick={()=>onChange(v)}
-              className={`px-2 py-1 rounded text-xs border ${value===v ? "bg-slate-900 text-white" : "bg-white hover:bg-slate-100"}`}>
+              className={`px-2 py-1 rounded text-xs border press-anim ${value===v ? "bg-slate-900 text-white" : "bg-white hover:bg-slate-100"}`}>
               {Math.round(v*100)}%
             </button>
           ))}
@@ -407,7 +430,7 @@
       );
     }
 
-    // --------------------------- Components ---------------------------
+    // --------------------------- Market Grid ---------------------------
     function MarketGrid({fixtures,players,teams,filterFixtureId,query,onBuy}){
       const teamById = Object.fromEntries(teams.map(t=>[t.id,t]));
       const fixturesShown = fixtures.filter(f=> f.status==="upcoming" && (filterFixtureId==="all" || filterFixtureId===f.id));
@@ -444,11 +467,15 @@
                           <div key={pid} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
                             <div className="min-w-0">
                               <div className="text-sm font-semibold truncate">{p.name}</div>
-                              <div className="text-xs text-slate-500 truncate">{p.pos} • {p.team} • Base {p.basePrice}c</div>
+                              <div className="text-xs text-slate-500 truncate">{p.pos} • {p.team} • Base {$fmt(p.basePrice)}</div>
                             </div>
-                            <button onClick={()=>onBuy(p.id, f.id, 1, sharePct)} className="px-3 py-1.5 bg-slate-900 text-white rounded text-sm">
-                              Buy {Math.round(sharePct*100)}% · {cost}c
-                            </button>
+                            <div className="text-right">
+                              <div className="text-[10px] text-slate-500 mb-1">+ fee {$fmt(TX_FEE)}</div>
+                              <button onClick={()=>onBuy(p.id, f.id, 1, sharePct)}
+                                className="px-3 py-1.5 bg-slate-900 text-white rounded text-sm press-anim">
+                                Buy {Math.round(sharePct*100)}% · {$fmt(cost + TX_FEE)}
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -472,8 +499,8 @@
               <div className="text-xs text-slate-500">{player?.pos} • {player?.team}</div>
             </div>
             {canQuickSell && (
-              <button onClick={onQuickSell} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">
-                Quick Sell (all shares)
+              <button onClick={onQuickSell} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white press-anim">
+                Quick Sell (all shares) − {$fmt(TX_FEE)}
               </button>
             )}
           </div>
@@ -517,7 +544,7 @@
                 <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
               )}
               {!isFinished && (
-                <button onClick={onResolve} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm">Resolve</button>
+                <button onClick={onResolve} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm press-anim">Resolve</button>
               )}
             </div>
           </div>
@@ -564,8 +591,16 @@
       const [tab,setTab] = useState("market");
       const [fixtureFilter,setFixtureFilter] = useState("all");
       const [query,setQuery] = useState("");
+      const [toast, setToast] = useState(null); // {message, ts}
 
       useEffect(()=> saveState(state), [state]);
+
+      // clear stale toasts
+      useEffect(()=>{
+        if(!toast) return;
+        const t = setTimeout(()=> setToast(null), 1200);
+        return ()=> clearTimeout(t);
+      }, [toast]);
 
       const byId = useMemo(()=>({
         player: Object.fromEntries(state.players.map(p=>[p.id,p])),
@@ -581,12 +616,14 @@
         return (isHome? homeGoals>awayGoals : awayGoals>homeGoals) ? "W":"L";
       }
 
-      // BUY with sharePct
+      // BUY with sharePct, includes fee
       function buyCard(playerId, fixtureId, qty=1, sharePct=1.0){
         const p = byId.player[playerId]; const f = byId.fixture[fixtureId];
         if(!p || !f || f.status!=="upcoming") return;
-        const cost = Math.round(p.basePrice * sharePct) * qty;
-        if(state.balance < cost) return alert("Not enough coins.");
+        const itemCost = Math.round(p.basePrice * sharePct);
+        const total = itemCost * qty + TX_FEE; // include fee
+        if(state.balance < total) return alert("Not enough funds.");
+
         const item = {
           id:`card_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
           playerId, fixtureId,
@@ -596,13 +633,14 @@
         };
         setState(s=>({
           ...s,
-          balance: s.balance - cost,
+          balance: s.balance - total,
           portfolio: [item, ...s.portfolio],
-          tx: [{ id:`tx_${Date.now()}`, type:"BUY", amount:-cost, ts:new Date().toISOString(), meta:{ playerId, fixtureId, qty, sharePct } }, ...s.tx],
+          tx: [{ id:`tx_${Date.now()}`, type:"BUY", amount:-total, ts:new Date().toISOString(), meta:{ playerId, fixtureId, qty, sharePct, fee: TX_FEE } }, ...s.tx],
         }));
+        setToast({ message:`Purchased ${Math.round(sharePct*100)}% of ${p.name} (${f.label})`, ts: Date.now() });
       }
 
-      // SELL (single card) — payout proportional to sharePct
+      // SELL (single card) — payout proportional to sharePct, minus fee
       function sellCard(cardId){
         const card = state.portfolio.find(c=>c.id===cardId);
         if(!card || card.soldAt) return;
@@ -613,14 +651,16 @@
         const teamRes = teamResultForPlayer(card.playerId, fixture);
         const score = scoreForPlayer(stat, player.pos, teamRes);
         const unit = newValueFromScore(player.basePrice, score);
-        const current = Math.round(unit * card.sharePct) * card.quantity;
+        const gross = Math.round(unit * card.sharePct) * card.quantity;
+        const net = Math.max(0, gross - TX_FEE);
 
         setState(s=>({
           ...s,
-          balance: s.balance + current,
-          portfolio: s.portfolio.map(c=> c.id===cardId ? { ...c, soldAt: current } : c),
-          tx: [{ id:`tx_${Date.now()}`, type:"SELL", amount: current, ts:new Date().toISOString(), meta:{ cardId } }, ...s.tx],
+          balance: s.balance + net,
+          portfolio: s.portfolio.map(c=> c.id===cardId ? { ...c, soldAt: net } : c),
+          tx: [{ id:`tx_${Date.now()}`, type:"SELL", amount: net, ts:new Date().toISOString(), meta:{ cardId, fee: TX_FEE, gross } }, ...s.tx],
         }));
+        setToast({ message:`Sold ${Math.round(card.sharePct*100)}% of ${player.name} (${fixture.label})`, ts: Date.now() });
       }
 
       // QUICK SELL: sell all unsold cards for a specific (playerId, fixtureId)
@@ -633,27 +673,30 @@
         const score = scoreForPlayer(stat, player.pos, teamRes);
         const unit = newValueFromScore(player.basePrice, score);
 
-        let credit = 0;
+        let grossTotal = 0;
+        let netCredit = 0;
         const nextPortfolio = state.portfolio.map(c=>{
           if(c.playerId===playerId && c.fixtureId===fixtureId && !c.soldAt){
-            const amt = Math.round(unit * c.sharePct) * c.quantity;
-            credit += amt;
-            return { ...c, soldAt: amt };
+            const gross = Math.round(unit * c.sharePct) * c.quantity;
+            grossTotal += gross;
+            const net = Math.max(0, gross - TX_FEE);
+            netCredit += net;
+            return { ...c, soldAt: net };
           }
           return c;
         });
 
-        if(credit === 0) return; // nothing to sell
+        if(netCredit === 0 && grossTotal === 0) return; // nothing to sell
 
         setState(s=>({
           ...s,
-          balance: s.balance + credit,
+          balance: s.balance + netCredit,
           portfolio: nextPortfolio,
-          tx: [{ id:`tx_${Date.now()}`, type:"SELL", amount: credit, ts:new Date().toISOString(), meta:{ playerId, fixtureId, bulk:true } }, ...s.tx],
+          tx: [{ id:`tx_${Date.now()}`, type:"SELL", amount: netCredit, ts:new Date().toISOString(), meta:{ playerId, fixtureId, bulk:true, feeEach: TX_FEE, grossTotal } }, ...s.tx],
         }));
+        setToast({ message:`Sold all shares of ${player.name} (${f.label})`, ts: Date.now() });
       }
 
-      // helpers for fixture card to know ownership
       function ownedByPlayerForFixture(playerId, fixtureId){
         return state.portfolio.filter(c=> c.playerId===playerId && c.fixtureId===fixtureId && !c.soldAt);
       }
@@ -694,17 +737,18 @@
         }));
       }
 
+      // Derived portfolio values (using potential gross for open cards; sells store net)
       const portfolioWithMeta = state.portfolio.map(c=>{
         const player = byId.player[c.playerId];
         const fixture = byId.fixture[c.fixtureId];
-        const invested = Math.round(c.boughtPrice * c.sharePct) * c.quantity;
-        let current = invested;
+        const invested = Math.round(c.boughtPrice * c.sharePct) * c.quantity + TX_FEE; // buy included fee
+        let current = Math.round(c.boughtPrice * c.sharePct) * c.quantity; // default pre-match
         if(fixture && fixture.status==="finished"){
           const stat = fixture.result?.stats?.[c.playerId] || {};
           const teamRes = teamResultForPlayer(c.playerId, fixture);
           const score = scoreForPlayer(stat, player.pos, teamRes);
           const unit = newValueFromScore(player.basePrice, score);
-          current = Math.round(unit * c.sharePct) * c.quantity;
+          current = Math.round(unit * c.sharePct) * c.quantity; // gross (fee only on sell)
         }
         const roi = invested ? (current - invested) / invested : 0;
         return { ...c, player, fixture, invested, current, roi };
@@ -722,10 +766,10 @@
                 <h1 className="text-lg sm:text-xl font-bold">FutStocks — Matchweek 3 (Fractional)</h1>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="border rounded px-3 py-1 bg-white">Balance: {state.balance.toLocaleString()}c</span>
-                <span className="border rounded px-3 py-1 bg-white">Net Worth: {netWorth.toLocaleString()}c</span>
+                <span className="border rounded px-3 py-1 bg-white">Balance: {$fmt(state.balance)}</span>
+                <span className="border rounded px-3 py-1 bg-white">Net Worth: {$fmt(netWorth)}</span>
                 <button onClick={()=>{ if(confirm("Reset all progress?")) setState({ balance:1000, players:PLAYERS, teams:TEAMS, fixtures:FIXTURES, portfolio:[], tx:[] }) }}
-                        className="px-3 py-1.5 bg-slate-900 text-white rounded">Reset</button>
+                        className="px-3 py-1.5 bg-slate-900 text-white rounded press-anim">Reset</button>
               </div>
             </div>
             <nav className="mx-auto max-w-7xl px-4 pb-3 flex gap-2">
@@ -756,7 +800,7 @@
                            className="w-64 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm"/>
                   </div>
                   <button onClick={resolveAllUpcoming}
-                          className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">
+                          className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 press-anim">
                     Resolve ALL upcoming
                   </button>
                 </div>
@@ -770,15 +814,15 @@
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl border bg-white p-4 shadow-sm">
                     <div className="text-xs text-slate-500">Balance</div>
-                    <div className="text-xl font-semibold">{state.balance.toLocaleString()}c</div>
+                    <div className="text-xl font-semibold">{$fmt(state.balance)}</div>
                   </div>
                   <div className="rounded-2xl border bg-white p-4 shadow-sm">
-                    <div className="text-xs text-slate-500">Open Portfolio</div>
-                    <div className="text-xl font-semibold">{portfolioValueOpen.toLocaleString()}c</div>
+                    <div className="text-xs text-slate-500">Open Portfolio (gross)</div>
+                    <div className="text-xl font-semibold">{$fmt(portfolioValueOpen)}</div>
                   </div>
                   <div className="rounded-2xl border bg-white p-4 shadow-sm">
                     <div className="text-xs text-slate-500">Net Worth</div>
-                    <div className="text-xl font-semibold">{netWorth.toLocaleString()}c</div>
+                    <div className="text-xl font-semibold">{$fmt(netWorth)}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -787,25 +831,38 @@
                     <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="min-w-0">
-                          <div className="text-sm text-slate-600 truncate">{c.player?.name} <span className="text-xs text-slate-500">({c.player?.pos} • {c.player?.team})</span></div>
+                          <div className="text-sm text-slate-600 truncate">
+                            {c.player?.name} <span className="text-xs text-slate-500">({c.player?.pos} • {c.player?.team})</span>
+                          </div>
                           <div className="text-xs text-slate-500 truncate">
                             {c.fixture ? `${c.fixture.label} · ${c.fixture.day}` : "-"}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm">Bought @ <span className="font-semibold">{(Math.round(c.boughtPrice*c.sharePct)*c.quantity).toLocaleString()}c</span> <span className="text-xs text-slate-500">({Math.round(c.sharePct*100)}%)</span></div>
-                          <div className="text-sm">Current: <span className="font-semibold">{c.current.toLocaleString()}c</span></div>
+                          <div className="text-sm">
+                            Bought @ <span className="font-semibold">{$fmt(Math.round(c.boughtPrice*c.sharePct)*c.quantity)}</span>
+                            <span className="text-xs text-slate-500"> ({Math.round(c.sharePct*100)}%)</span>
+                          </div>
+                          <div className="text-[10px] text-slate-500">+ buy fee {$fmt(TX_FEE)} (already included)</div>
+                          <div className="text-sm">Current: <span className="font-semibold">{$fmt(c.current)}</span></div>
                           <div className={`text-sm ${c.current-c.invested>=0?"text-emerald-600":"text-rose-600"}`}>ROI: {(c.roi*100).toFixed(1)}%</div>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-slate-500">{c.fixture?.status==="finished" ? "Match finished" : "Locked until full-time"}</div>
+                        <div className="text-xs text-slate-500">
+                          {c.fixture?.status==="finished" ? "Match finished" : "Locked until full-time"}
+                        </div>
                         <div className="flex gap-2">
                           {!c.soldAt && c.fixture?.status==="finished" && (
-                            <button onClick={()=>sellCard(c.id)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Sell</button>
+                            <button onClick={()=>sellCard(c.id)}
+                              className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800 press-anim">
+                              Sell (− {$fmt(TX_FEE)})
+                            </button>
                           )}
                           {c.soldAt && (
-                            <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">Sold @ {c.soldAt.toLocaleString()}c</span>
+                            <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">
+                              Sold @ {$fmt(c.soldAt)}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -833,16 +890,16 @@
 
             {tab==="rules" && (
               <div className="rounded-2xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-3 text-lg font-bold">How it works (Fractional Model B)</h2>
+                <h2 className="mb-3 text-lg font-bold">How it works (Fractional Model B + Fees)</h2>
                 <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
                   <li>Pick a player in an upcoming fixture and choose a <strong>share</strong> (25/50/75/100%).</li>
-                  <li>Cost = Base Price × Share.</li>
-                  <li>After the match, value updates by performance; <strong>payout = New Value × Share</strong> (when you sell).</li>
+                  <li>Cost = Base × Share <strong>+ $20 fee</strong> per Buy.</li>
+                  <li>After the match, value updates by performance; <strong>Sell payout = New Value × Share − $20 fee</strong>.</li>
                   <li>Profits/losses are unrealized until you press <em>Sell</em>.</li>
-                  <li>Net Worth = Balance + Value of unsold cards.</li>
+                  <li>Net Worth = Balance + Gross value of unsold cards.</li>
                 </ol>
                 <h3 className="mt-5 text-base font-semibold">Base Price Tiers</h3>
-                <p className="text-sm text-slate-700">Cards use one of: ₵150, ₵200, ₵250, ₵300 based on player tier.</p>
+                <p className="text-sm text-slate-700">Cards use one of: $150, $200, $250, $300 based on player tier.</p>
               </div>
             )}
 
@@ -866,7 +923,7 @@
                           <tr key={t.id} className="border-t">
                             <td className="px-4 py-3 text-slate-500">{new Date(t.ts).toLocaleString()}</td>
                             <td className="px-4 py-3 font-semibold">{t.type}</td>
-                            <td className={`px-4 py-3 ${t.amount>=0?"text-emerald-700":"text-rose-700"}`}>{t.amount.toLocaleString()}c</td>
+                            <td className={`px-4 py-3 ${t.amount>=0?"text-emerald-700":"text-rose-700"}`}>{$fmt(t.amount)}</td>
                             <td className="px-4 py-3 text-slate-500 text-xs">{JSON.stringify(t.meta)}</td>
                           </tr>
                         ))}
@@ -877,6 +934,8 @@
               </section>
             )}
           </main>
+
+          <Toast show={!!toast}>{toast?.message || ""}</Toast>
         </div>
       );
     }
