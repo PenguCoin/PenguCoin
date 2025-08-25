@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FutStocks — Fantasy ROI</title>
-  <!-- Tailwind CDN -->
+  <title>FutStocks — Big Six Edition</title>
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React 18 UMD + Babel -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -18,48 +18,269 @@
     const { useEffect, useMemo, useState } = React;
 
     // --------------------------- Helpers ---------------------------
-    const LS_KEY = "futstocks_state_v1";
+    const LS_KEY = "futstocks_state_v2_bigsix";
     const POS = { GK:"GK", DEF:"DEF", MID:"MID", FWD:"FWD" };
-    const clamp = (v,min,max)=> Math.min(max, Math.max(min, v));
-    const randInt = (a,b)=> Math.floor(Math.random()*(b-a+1))+a;
-    const chance = (p)=> Math.random() < p;
+    const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
+    const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+    const chance = (p) => Math.random() < p;
 
-    const loadState = () => { try{ const raw=localStorage.getItem(LS_KEY); return raw? JSON.parse(raw): null; } catch { return null; } };
-    const saveState = (s) => { try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {} };
+    const loadState = () => { try { const raw = localStorage.getItem(LS_KEY); return raw? JSON.parse(raw): null; } catch { return null; } };
+    const saveState = (s) => { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch {} };
 
-    // --------------------------- Seed Data ---------------------------
+    // --------------------------- Teams ---------------------------
     const TEAMS = [
       { id:"MUN", name:"Manchester United" },
       { id:"MCI", name:"Manchester City" },
       { id:"ARS", name:"Arsenal" },
       { id:"LIV", name:"Liverpool" },
       { id:"CHE", name:"Chelsea" },
-      { id:"TOT", name:"Tottenham" },
+      { id:"TOT", name:"Tottenham Hotspur" },
     ];
 
-    const PLAYERS = [
-      { id:"p1", name:"Marcus Rashford",  pos:POS.FWD, team:"MUN", basePrice:140 },
-      { id:"p2", name:"Bruno Fernandes",  pos:POS.MID, team:"MUN", basePrice:135 },
-      { id:"p3", name:"Erling Haaland",   pos:POS.FWD, team:"MCI", basePrice:160 },
-      { id:"p4", name:"Phil Foden",       pos:POS.MID, team:"MCI", basePrice:150 },
-      { id:"p5", name:"Bukayo Saka",      pos:POS.FWD, team:"ARS", basePrice:145 },
-      { id:"p6", name:"Martin Ødegaard",  pos:POS.MID, team:"ARS", basePrice:142 },
-      { id:"p7", name:"Mohamed Salah",    pos:POS.FWD, team:"LIV", basePrice:155 },
-      { id:"p8", name:"Virgil van Dijk",  pos:POS.DEF, team:"LIV", basePrice:120 },
-      { id:"p9", name:"Cole Palmer",      pos:POS.MID, team:"CHE", basePrice:138 },
-      { id:"p10",name:"Raheem Sterling",  pos:POS.FWD, team:"CHE", basePrice:128 },
-      { id:"p11",name:"Heung‑min Son",    pos:POS.FWD, team:"TOT", basePrice:150 },
-      { id:"p12",name:"James Maddison",   pos:POS.MID, team:"TOT", basePrice:135 },
+    // --------------------------- Squads (from your lists) ---------------------------
+    // helper to generate ids
+    let __pid = 1; const pid = () => `p${__pid++}`;
+    const P = (name,pos,team,base)=>({ id: pid(), name, pos, team, basePrice: base });
+
+    // Manchester United
+    const MUN = [
+      // GK
+      P("Altay Bayındır", POS.GK, "MUN", 95),
+      P("André Onana", POS.GK, "MUN", 130),
+      P("Tom Heaton", POS.GK, "MUN", 60),
+      // DEF
+      P("Diogo Dalot", POS.DEF, "MUN", 110),
+      P("Noussair Mazraoui", POS.DEF, "MUN", 105),
+      P("Matthijs de Ligt", POS.DEF, "MUN", 145),
+      P("Harry Maguire", POS.DEF, "MUN", 100),
+      P("Lisandro Martínez", POS.DEF, "MUN", 120),
+      P("Leny Yoro", POS.DEF, "MUN", 125),
+      P("Patrick Dorgu", POS.DEF, "MUN", 85),
+      P("Luke Shaw", POS.DEF, "MUN", 115),
+      P("Ayden Heaven", POS.DEF, "MUN", 65),
+      P("Tyler Fredricson", POS.DEF, "MUN", 65),
+      P("Harry Amass", POS.DEF, "MUN", 70),
+      // MID
+      P("Mason Mount", POS.MID, "MUN", 120),
+      P("Bruno Fernandes (C)", POS.MID, "MUN", 155),
+      P("Casemiro", POS.MID, "MUN", 115),
+      P("Manuel Ugarte", POS.MID, "MUN", 120),
+      P("Kobbie Mainoo", POS.MID, "MUN", 140),
+      // FWD
+      P("Rasmus Højlund", POS.FWD, "MUN", 150),
+      P("Matheus Cunha", POS.FWD, "MUN", 135),
+      P("Joshua Zirkzee", POS.FWD, "MUN", 130),
+      P("Amad Diallo", POS.FWD, "MUN", 110),
+      P("Alejandro Garnacho", POS.FWD, "MUN", 145),
+      P("Bryan Mbeumo", POS.FWD, "MUN", 135),
+      P("Benjamin Šeško", POS.FWD, "MUN", 140),
+      P("Chido Obi", POS.FWD, "MUN", 70),
     ];
 
-    const hoursFromNow = (h)=> { const t=new Date(); t.setHours(t.getHours()+h); return t.toISOString(); };
+    // Manchester City
+    const MCI = [
+      // GK
+      P("James Trafford", POS.GK, "MCI", 95),
+      P("Marcus Bettinelli", POS.GK, "MCI", 70),
+      P("Stefan Ortega", POS.GK, "MCI", 110),
+      P("Ederson", POS.GK, "MCI", 135),
+      // DEF
+      P("Rúben Dias", POS.DEF, "MCI", 155),
+      P("John Stones", POS.DEF, "MCI", 145),
+      P("Nathan Aké", POS.DEF, "MCI", 130),
+      P("Rayan Aït‑Nouri", POS.DEF, "MCI", 120),
+      P("Joško Gvardiol", POS.DEF, "MCI", 150),
+      P("Manuel Akanji", POS.DEF, "MCI", 135),
+      P("Abdukodir Khusanov", POS.DEF, "MCI", 90),
+      P("Rico Lewis", POS.DEF, "MCI", 120),
+      P("Joshua Wilson‑Esbrand", POS.DEF, "MCI", 85),
+      // MID/ATT
+      P("Tijjani Reijnders", POS.MID, "MCI", 135),
+      P("Mateo Kovačić", POS.MID, "MCI", 120),
+      P("Rayan Cherki", POS.MID, "MCI", 125),
+      P("Jérémy Doku", POS.FWD, "MCI", 140),
+      P("Nico González", POS.MID, "MCI", 120),
+      P("Rodri", POS.MID, "MCI", 165),
+      P("İlkay Gündoğan", POS.MID, "MCI", 115),
+      P("Bernardo Silva (C)", POS.MID, "MCI", 160),
+      P("Savinho", POS.FWD, "MCI", 130),
+      P("Matheus Nunes", POS.MID, "MCI", 120),
+      P("Nico O'Reilly", POS.MID, "MCI", 95),
+      P("Kalvin Phillips", POS.MID, "MCI", 95),
+      P("Phil Foden", POS.FWD, "MCI", 170),
+      P("Oscar Bobb", POS.FWD, "MCI", 115),
+      // FWD
+      P("Omar Marmoush", POS.FWD, "MCI", 125),
+      P("Erling Haaland", POS.FWD, "MCI", 200),
+    ];
+
+    // Arsenal
+    const ARS = [
+      // GK
+      P("David Raya", POS.GK, "ARS", 120),
+      P("Kepa Arrizabalaga", POS.GK, "ARS", 110),
+      // DEF
+      P("William Saliba", POS.DEF, "ARS", 170),
+      P("Cristhian Mosquera", POS.DEF, "ARS", 120),
+      P("Ben White", POS.DEF, "ARS", 150),
+      P("Gabriel Magalhães", POS.DEF, "ARS", 150),
+      P("Jurriën Timber", POS.DEF, "ARS", 135),
+      P("Jakub Kiwior", POS.DEF, "ARS", 115),
+      P("Oleksandr Zinchenko", POS.DEF, "ARS", 125),
+      P("Riccardo Calafiori", POS.DEF, "ARS", 140),
+      // MID
+      P("Martin Ødegaard (C)", POS.MID, "ARS", 170),
+      P("Christian Nørgaard", POS.MID, "ARS", 115),
+      P("Fábio Vieira", POS.MID, "ARS", 110),
+      P("Ethan Nwaneri", POS.MID, "ARS", 95),
+      P("Mikel Merino", POS.MID, "ARS", 145),
+      P("Albert Sambi Lokonga", POS.MID, "ARS", 100),
+      P("Martín Zubimendi", POS.MID, "ARS", 150),
+      P("Declan Rice", POS.MID, "ARS", 170),
+      // FWD
+      P("Bukayo Saka", POS.FWD, "ARS", 185),
+      P("Gabriel Jesus", POS.FWD, "ARS", 135),
+      P("Eberechi Eze", POS.MID, "ARS", 145),
+      P("Gabriel Martinelli", POS.FWD, "ARS", 160),
+      P("Viktor Gyökeres", POS.FWD, "ARS", 170),
+      P("Leandro Trossard", POS.FWD, "ARS", 140),
+      P("Noni Madueke", POS.FWD, "ARS", 120),
+      P("Reiss Nelson", POS.FWD, "ARS", 105),
+      P("Kai Havertz", POS.FWD, "ARS", 150),
+      P("Max Dowman", POS.MID, "ARS", 80),
+    ];
+
+    // Liverpool
+    const LIV = [
+      // GK
+      P("Alisson Becker", POS.GK, "LIV", 150),
+      P("Caoimhín Kelleher", POS.GK, "LIV", 105),
+      P("Vítězslav Jaroš", POS.GK, "LIV", 85),
+      // DEF
+      P("Trent Alexander-Arnold", POS.DEF, "LIV", 170),
+      P("Conor Bradley", POS.DEF, "LIV", 110),
+      P("Ibrahima Konaté", POS.DEF, "LIV", 135),
+      P("Virgil van Dijk", POS.DEF, "LIV", 165),
+      P("Jarell Quansah", POS.DEF, "LIV", 120),
+      P("Joe Gomez", POS.DEF, "LIV", 120),
+      P("Andrew Robertson", POS.DEF, "LIV", 140),
+      P("Kostas Tsimikas", POS.DEF, "LIV", 110),
+      // MID
+      P("Alexis Mac Allister", POS.MID, "LIV", 145),
+      P("Dominik Szoboszlai", POS.MID, "LIV", 155),
+      P("Curtis Jones", POS.MID, "LIV", 120),
+      P("Ryan Gravenberch", POS.MID, "LIV", 120),
+      P("Wataru Endō", POS.MID, "LIV", 105),
+      P("Stefan Bajčetić", POS.MID, "LIV", 95),
+      P("Harvey Elliott", POS.MID, "LIV", 125),
+      // FWD
+      P("Mohamed Salah", POS.FWD, "LIV", 190),
+      P("Cody Gakpo", POS.FWD, "LIV", 140),
+      P("Jayden Danns", POS.FWD, "LIV", 85),
+    ];
+
+    // Chelsea
+    const CHE = [
+      // GK
+      P("Robert Sánchez", POS.GK, "CHE", 115),
+      P("Djordje Petrović", POS.GK, "CHE", 115),
+      P("Gabriel Slonina", POS.GK, "CHE", 90),
+      // DEF
+      P("Reece James", POS.DEF, "CHE", 150),
+      P("Malo Gusto", POS.DEF, "CHE", 130),
+      P("Wesley Fofana", POS.DEF, "CHE", 130),
+      P("Levi Colwill", POS.DEF, "CHE", 135),
+      P("Trevoh Chalobah", POS.DEF, "CHE", 115),
+      P("Axel Disasi", POS.DEF, "CHE", 120),
+      P("Benoît Badiashile", POS.DEF, "CHE", 120),
+      P("Marc Cucurella", POS.DEF, "CHE", 110),
+      P("Ben Chilwell", POS.DEF, "CHE", 120),
+      P("Ian Maatsen", POS.DEF, "CHE", 110),
+      // MID
+      P("Enzo Fernández", POS.MID, "CHE", 150),
+      P("Moisés Caicedo", POS.MID, "CHE", 155),
+      P("Conor Gallagher", POS.MID, "CHE", 135),
+      P("Carney Chukwuemeka", POS.MID, "CHE", 110),
+      P("Cesare Casadei", POS.MID, "CHE", 100),
+      P("Romeo Lavia", POS.MID, "CHE", 120),
+      P("Lesley Ugochukwu", POS.MID, "CHE", 95),
+      // FWD
+      P("Raheem Sterling", POS.FWD, "CHE", 135),
+      P("Mykhailo Mudryk", POS.FWD, "CHE", 130),
+      P("Christopher Nkunku", POS.FWD, "CHE", 150),
+      P("Cole Palmer", POS.MID, "CHE", 165),
+      P("Nicolas Jackson", POS.FWD, "CHE", 135),
+      P("Deivid Washington", POS.FWD, "CHE", 95),
+      P("Omari Hutchinson", POS.FWD, "CHE", 105),
+    ];
+
+    // Tottenham
+    const TOT = [
+      // GK
+      P("Guglielmo Vicario", POS.GK, "TOT", 135),
+      P("Fraser Forster", POS.GK, "TOT", 75),
+      P("Brandon Austin", POS.GK, "TOT", 80),
+      // DEF
+      P("Pedro Porro", POS.DEF, "TOT", 140),
+      P("Emerson Royal", POS.DEF, "TOT", 110),
+      P("Cristian Romero", POS.DEF, "TOT", 150),
+      P("Micky van de Ven", POS.DEF, "TOT", 150),
+      P("Radu Drăgușin", POS.DEF, "TOT", 125),
+      P("Ashley Phillips", POS.DEF, "TOT", 95),
+      P("Destiny Udogie", POS.DEF, "TOT", 140),
+      P("Ben Davies", POS.DEF, "TOT", 105),
+      // MID
+      P("Yves Bissouma", POS.MID, "TOT", 125),
+      P("Rodrigo Bentancur", POS.MID, "TOT", 130),
+      P("Pape Matar Sarr", POS.MID, "TOT", 130),
+      P("Pierre-Emile Højbjerg", POS.MID, "TOT", 120),
+      P("James Maddison", POS.MID, "TOT", 150),
+      P("Giovani Lo Celso", POS.MID, "TOT", 120),
+      P("Oliver Skipp", POS.MID, "TOT", 105),
+      // FWD
+      P("Heung-min Son", POS.FWD, "TOT", 175),
+      P("Dejan Kulusevski", POS.FWD, "TOT", 145),
+      P("Richarlison", POS.FWD, "TOT", 140),
+      P("Brennan Johnson", POS.FWD, "TOT", 135),
+      P("Manor Solomon", POS.FWD, "TOT", 105),
+      P("Dane Scarlett", POS.FWD, "TOT", 95),
+    ];
+
+    const PLAYERS = [...MUN, ...MCI, ...ARS, ...LIV, ...CHE, ...TOT];
+
+    // --------------------------- Fixtures ---------------------------
+    const hoursFromNow = (h) => { const t = new Date(); t.setHours(t.getHours()+h); return t.toISOString(); };
+
+    // Helper: pick by team & position groups
+    const pickBy = (team, predicate, n) => {
+      const pool = PLAYERS.filter(p => p.team === team && predicate(p));
+      return pool.slice(0, n).map(p => p.id);
+    };
+    const GK = p => p.pos===POS.GK, DEF = p=>p.pos===POS.DEF, MID = p=>p.pos===POS.MID, FWD = p=>p.pos===POS.FWD;
+
+    // Build few upcoming fixtures with representative players
     const FIXTURES = [
-      { id:"f1", home:"MUN", away:"MCI", kickoff:hoursFromNow(2), status:"upcoming", homePlayers:["p1","p2"], awayPlayers:["p3","p4"], result:null },
-      { id:"f2", home:"ARS", away:"LIV", kickoff:hoursFromNow(4), status:"upcoming", homePlayers:["p5","p6"], awayPlayers:["p7","p8"], result:null },
-      { id:"f3", home:"CHE", away:"TOT", kickoff:hoursFromNow(6), status:"upcoming", homePlayers:["p9","p10"], awayPlayers:["p11","p12"], result:null },
+      {
+        id:"fx1", home:"MUN", away:"MCI", kickoff:hoursFromNow(2), status:"upcoming",
+        homePlayers:[...pickBy("MUN", GK,1), ...pickBy("MUN", DEF,2), ...pickBy("MUN", MID,2), ...pickBy("MUN", FWD,2)],
+        awayPlayers:[...pickBy("MCI", GK,1), ...pickBy("MCI", DEF,2), ...pickBy("MCI", MID,2), ...pickBy("MCI", FWD,2)],
+        result:null
+      },
+      {
+        id:"fx2", home:"ARS", away:"LIV", kickoff:hoursFromNow(4), status:"upcoming",
+        homePlayers:[...pickBy("ARS", GK,1), ...pickBy("ARS", DEF,2), ...pickBy("ARS", MID,2), ...pickBy("ARS", FWD,2)],
+        awayPlayers:[...pickBy("LIV", GK,1), ...pickBy("LIV", DEF,2), ...pickBy("LIV", MID,2), ...pickBy("LIV", FWD,2)],
+        result:null
+      },
+      {
+        id:"fx3", home:"CHE", away:"TOT", kickoff:hoursFromNow(6), status:"upcoming",
+        homePlayers:[...pickBy("CHE", GK,1), ...pickBy("CHE", DEF,2), ...pickBy("CHE", MID,2), ...pickBy("CHE", FWD,2)],
+        awayPlayers:[...pickBy("TOT", GK,1), ...pickBy("TOT", DEF,2), ...pickBy("TOT", MID,2), ...pickBy("TOT", FWD,2)],
+        result:null
+      },
     ];
 
-    // --------------------------- Scoring ---------------------------
+    // --------------------------- Scoring & Simulation ---------------------------
     function scoreForPlayer(stat, pos, teamResult){
       let s=0;
       if(teamResult==="W") s+=10; else if(teamResult==="D") s+=3;
@@ -94,53 +315,85 @@
       return { minutes, goals, assists, yellow, red, ownGoals, penMiss, penSaves, saves, penConceded, cleanSheet };
     }
 
-    // --------------------------- UI Helpers ---------------------------
+    // --------------------------- UI helpers ---------------------------
     const fmtTeam = (id, teamById)=> teamById[id]?.name || id;
     const fmtTime = (iso)=> new Date(iso).toLocaleString();
 
     function Tab({label,value,active,onClick}){
       const isActive = active===value;
       return (
-        <button onClick={()=>onClick(value)} className={`px-3 py-1 rounded ${isActive? "bg-slate-900 text-white":"bg-white border"}`}>
+        <button onClick={()=>onClick(value)} className={`px-3 py-1.5 rounded ${isActive? "bg-slate-900 text-white":"bg-white border"}`}>
           {label}
         </button>
       );
     }
-
     function EmptyCard({title,subtitle}){
       return (
-        <div className="border rounded-lg p-6 bg-white text-center">
+        <div className="border rounded-xl p-6 bg-white text-center">
           <div className="font-semibold">{title}</div>
           <div className="text-xs text-slate-500">{subtitle}</div>
         </div>
       );
     }
 
+    function NumField({label, value, onChange, min=0}){
+      return (
+        <label className="flex items-center gap-2 text-xs">
+          <span className="w-20 text-slate-500">{label}</span>
+          <input type="number" className="w-24 rounded-lg border bg-white px-2 py-1 shadow-sm"
+                 value={value ?? 0} min={min}
+                 onChange={(e)=>onChange(Number(e.target.value))}/>
+        </label>
+      );
+    }
+    function ToggleField({label, value, onChange}){
+      return (
+        <label className="flex items-center gap-2 text-xs">
+          <span className="w-24 text-slate-500">{label}</span>
+          <input type="checkbox" checked={!!value} onChange={(e)=>onChange(e.target.checked)} />
+        </label>
+      );
+    }
+
     // --------------------------- Components ---------------------------
-    function MarketGrid({fixtures,players,teams,onBuy}){
+    function MarketGrid({fixtures,players,teams,filterFixtureId,query,onBuy}){
       const teamById = Object.fromEntries(teams.map(t=>[t.id,t]));
-      const upcoming = fixtures.filter(f=>f.status==="upcoming");
+      const fixturesShown = fixtures.filter(f=> f.status==="upcoming" && (filterFixtureId==="all" || filterFixtureId===f.id));
+      const q = (query||"").trim().toLowerCase();
       return (
         <div className="grid gap-4">
-          {upcoming.length===0 && <EmptyCard title="No upcoming fixtures" subtitle="Resolve some matches or reset the game."/>}
-          {upcoming.map(f=>(
-            <div key={f.id} className="border rounded-lg p-4 bg-white">
+          {fixturesShown.length===0 && <EmptyCard title="No upcoming fixtures" subtitle="Resolve matches or reset the game."/>}
+          {fixturesShown.map(f=>(
+            <div key={f.id} className="border rounded-xl p-4 bg-white">
               <div className="mb-2 text-sm font-semibold">
-                {fmtTeam(f.home, teamById)} vs {fmtTeam(f.away, teamById)} · <span className="text-slate-500">{fmtTime(f.kickoff)}</span>
+                {fmtTeam(f.home, teamById)} <span className="text-slate-400">vs</span> {fmtTeam(f.away, teamById)}
+                <span className="ml-2 text-xs text-slate-500">Kickoff: {fmtTime(f.kickoff)}</span>
               </div>
-              <div className="grid gap-2">
-                {[...f.homePlayers, ...f.awayPlayers].map(pid=>{
-                  const p = players.find(x=>x.id===pid);
-                  if(!p) return null;
-                  return (
-                    <div key={pid} className="flex items-center justify-between border rounded p-2">
-                      <div className="text-sm">{p.name} <span className="text-slate-500 text-xs">({p.pos})</span></div>
-                      <button onClick={()=>onBuy(p.id, f.id, 1)} className="px-2 py-1 bg-slate-900 text-white rounded text-sm">
-                        Buy · {p.basePrice}c
-                      </button>
+              <div className="grid gap-2 md:grid-cols-2">
+                {[{label:"Home", ids:f.homePlayers},{label:"Away", ids:f.awayPlayers}].map(col=>(
+                  <div key={col.label} className="rounded-lg border bg-slate-50 p-3">
+                    <div className="mb-2 text-xs font-semibold text-slate-600">{col.label} Players</div>
+                    <div className="space-y-2">
+                      {col.ids.map(pid=>{
+                        const p = players.find(x=>x.id===pid);
+                        if(!p) return null;
+                        const show = !q || p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q);
+                        if(!show) return null;
+                        return (
+                          <div key={pid} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold truncate">{p.name}</div>
+                              <div className="text-xs text-slate-500 truncate">{p.pos} • {p.team} • Base {p.basePrice}c</div>
+                            </div>
+                            <button onClick={()=>onBuy(p.id, f.id, 1)} className="px-3 py-1.5 bg-slate-900 text-white rounded text-sm">
+                              Buy · {p.basePrice}c
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -148,10 +401,91 @@
       );
     }
 
+    function PlayerStatRow({ player, stats, onEdit }){
+      const sixty = (stats?.minutes ?? 0) >= 60;
+      return (
+        <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">{player?.name}</div>
+              <div className="text-xs text-slate-500">{player?.pos} • {player?.team}</div>
+            </div>
+            <div className="text-xs text-slate-500">60+? {sixty ? "Yes":"No"}</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <NumField label="Min" value={stats.minutes??0} onChange={(v)=>onEdit({ minutes: clamp(v,0,120) })}/>
+            <NumField label="Goals" value={stats.goals??0} onChange={(v)=>onEdit({ goals: Math.max(0,v) })}/>
+            <NumField label="Assists" value={stats.assists??0} onChange={(v)=>onEdit({ assists: Math.max(0,v) })}/>
+            <ToggleField label="CleanSheet" value={!!stats.cleanSheet} onChange={(v)=>onEdit({ cleanSheet: !!v })}/>
+            <NumField label="Yellow" value={stats.yellow??0} onChange={(v)=>onEdit({ yellow: Math.max(0,v) })}/>
+            <NumField label="Red" value={stats.red??0} onChange={(v)=>onEdit({ red: Math.max(0,v) })}/>
+            <NumField label="OwnGoals" value={stats.ownGoals??0} onChange={(v)=>onEdit({ ownGoals: Math.max(0,v) })}/>
+            <NumField label="PenMiss" value={stats.penMiss??0} onChange={(v)=>onEdit({ penMiss: Math.max(0,v) })}/>
+            {player?.pos===POS.GK && (
+              <>
+                <NumField label="Saves" value={stats.saves??0} onChange={(v)=>onEdit({ saves: Math.max(0,v) })}/>
+                <NumField label="PenSaves" value={stats.penSaves??0} onChange={(v)=>onEdit({ penSaves: Math.max(0,v) })}/>
+              </>
+            )}
+            <NumField label="PenConc" value={stats.penConceded??0} onChange={(v)=>onEdit({ penConceded: Math.max(0,v) })}/>
+          </div>
+        </div>
+      );
+    }
+
+    function FixtureCard({ fixture, playersById, teamById, onResolve, onEditStat }){
+      const isFinished = fixture.status === "finished";
+      return (
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">{fmtTeam(fixture.home,teamById)} <span className="text-slate-400">vs</span> {fmtTeam(fixture.away,teamById)}</div>
+              <div className="text-xs text-slate-500">Kickoff: {fmtTime(fixture.kickoff)}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isFinished ? (
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  FT {fixture.result?.homeGoals ?? "-"}:{fixture.result?.awayGoals ?? "-"}
+                </span>
+              ) : (
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Upcoming</span>
+              )}
+              {!isFinished && (
+                <button onClick={onResolve} className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm">Resolve</button>
+              )}
+            </div>
+          </div>
+
+          {isFinished ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {[{label:"Home",ids:fixture.homePlayers},{label:"Away",ids:fixture.awayPlayers}].map(grp=>(
+                <div key={grp.label} className="rounded-xl border bg-slate-50/60 p-3">
+                  <div className="mb-2 text-xs font-semibold text-slate-600">{grp.label} Player Stats</div>
+                  <div className="space-y-2">
+                    {grp.ids.map(pid=>(
+                      <PlayerStatRow key={pid}
+                        player={playersById[pid]}
+                        stats={fixture.result?.stats?.[pid] || {}}
+                        onEdit={(patch)=>onEditStat(pid, patch)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed p-4 text-sm text-slate-500">
+              Stats available after full-time. You can edit stats after resolving.
+            </div>
+          )}
+        </div>
+      );
+    }
+
     // --------------------------- Main App ---------------------------
     function App(){
       const [state,setState] = useState(()=> loadState() || ({
-        balance: 500,
+        balance: 1000,
         players: PLAYERS,
         teams: TEAMS,
         fixtures: FIXTURES,
@@ -159,6 +493,8 @@
         tx: [],
       }));
       const [tab,setTab] = useState("market");
+      const [fixtureFilter,setFixtureFilter] = useState("all");
+      const [query,setQuery] = useState("");
 
       useEffect(()=> saveState(state), [state]);
 
@@ -173,16 +509,15 @@
         const { homeGoals, awayGoals } = fixture.result || {};
         if(homeGoals==null || awayGoals==null) return "D";
         if(homeGoals===awayGoals) return "D";
-        return (isHome? homeGoals>awayGoals : awayGoals>homeGoals) ? "W" : "L";
+        return (isHome? homeGoals>awayGoals : awayGoals>homeGoals) ? "W":"L";
       }
 
       function buyCard(playerId, fixtureId, qty=1){
-        const p = byId.player[playerId];
-        const f = byId.fixture[fixtureId];
+        const p = byId.player[playerId]; const f = byId.fixture[fixtureId];
         if(!p || !f || f.status!=="upcoming") return;
         const cost = p.basePrice * qty;
-        if(state.balance < cost) return alert("Not enough coins");
-        const item = { id:`card_${Date.now()}`, playerId, fixtureId, boughtPrice:p.basePrice, quantity:qty, soldAt:null };
+        if(state.balance < cost) return alert("Not enough coins.");
+        const item = { id:`card_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, playerId, fixtureId, boughtPrice:p.basePrice, quantity:qty, soldAt:null };
         setState(s=>({
           ...s,
           balance: s.balance - cost,
@@ -204,7 +539,7 @@
         setState(s=>({
           ...s,
           balance: s.balance + current,
-          portfolio: s.portfolio.map(c=> c.id===cardId? { ...c, soldAt: current } : c),
+          portfolio: s.portfolio.map(c=> c.id===cardId ? { ...c, soldAt: current } : c),
           tx: [{ id:`tx_${Date.now()}`, type:"SELL", amount: current, ts:new Date().toISOString(), meta:{ cardId } }, ...s.tx],
         }));
       }
@@ -225,9 +560,24 @@
           const ga = isHome ? awayGoals : homeGoals;
           stats[pid] = randomStatline(p.pos, gf, ga);
         }
-
         const updated = { ...f, status:"finished", result:{ homeGoals, awayGoals, stats } };
-        setState(s=>({ ...s, fixtures: s.fixtures.map((fx,i)=> i===idx ? updated : fx) }));
+        setState(s=>({ ...s, fixtures: s.fixtures.map((fx,i)=> i===idx? updated : fx) }));
+      }
+
+      function resolveAllUpcoming(){
+        state.fixtures.filter(f=>f.status==="upcoming").forEach(f=> resolveFixture(f.id));
+      }
+
+      function editStat(fixtureId, playerId, patch){
+        setState(s=>({
+          ...s,
+          fixtures: s.fixtures.map(f=>{
+            if(f.id !== fixtureId || !f.result) return f;
+            const nextStats = { ...(f.result.stats || {}) };
+            nextStats[playerId] = { ...(nextStats[playerId] || {}), ...patch };
+            return { ...f, result: { ...f.result, stats: nextStats } };
+          })
+        }));
       }
 
       const portfolioWithMeta = state.portfolio.map(c=>{
@@ -244,80 +594,178 @@
         const roi = invested ? (current - invested) / invested : 0;
         return { ...c, player, fixture, invested, current, roi };
       });
+      const portfolioValueOpen = portfolioWithMeta.filter(c=>!c.soldAt).reduce((s,c)=>s+c.current,0);
+      const netWorth = state.balance + portfolioValueOpen;
 
-      const portfolioOpenValue = portfolioWithMeta.filter(c=>!c.soldAt).reduce((s,c)=>s+c.current,0);
-      const netWorth = state.balance + portfolioOpenValue;
-
+      // --------------------------- UI ---------------------------
       return (
         <div className="min-h-screen">
           <header className="sticky top-0 z-10 border-b bg-white">
-            <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
-              <h1 className="text-lg font-bold">⚽ FutStocks</h1>
-              <div className="flex gap-2 text-sm">
-                <span className="border rounded px-3 py-1 bg-white">Balance: {state.balance}c</span>
-                <span className="border rounded px-3 py-1 bg-white">Net Worth: {netWorth}c</span>
+            <div className="mx-auto max-w-7xl flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white font-bold">FS</span>
+                <h1 className="text-lg sm:text-xl font-bold">FutStocks — Big Six</h1>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="border rounded px-3 py-1 bg-white">Balance: {state.balance.toLocaleString()}c</span>
+                <span className="border rounded px-3 py-1 bg-white">Net Worth: {netWorth.toLocaleString()}c</span>
+                <button onClick={()=>{ if(confirm("Reset all progress?")) setState({ balance:1000, players:PLAYERS, teams:TEAMS, fixtures:FIXTURES, portfolio:[], tx:[] }) }}
+                        className="px-3 py-1.5 bg-slate-900 text-white rounded">Reset</button>
               </div>
             </div>
-            <nav className="mx-auto max-w-6xl px-4 pb-3 flex gap-2">
-              <Tab label="Market" value="market" active={tab} onClick={setTab} />
-              <Tab label="Portfolio" value="portfolio" active={tab} onClick={setTab} />
-              <Tab label="Fixtures" value="fixtures" active={tab} onClick={setTab} />
-              <Tab label="Transactions" value="tx" active={tab} onClick={setTab} />
+            <nav className="mx-auto max-w-7xl px-4 pb-3 flex gap-2">
+              <Tab label="Market" value="market" active={tab} onClick={setTab}/>
+              <Tab label="Portfolio" value="portfolio" active={tab} onClick={setTab}/>
+              <Tab label="Fixtures" value="fixtures" active={tab} onClick={setTab}/>
+              <Tab label="Rules" value="rules" active={tab} onClick={setTab}/>
+              <Tab label="Transactions" value="tx" active={tab} onClick={setTab}/>
             </nav>
           </header>
 
-          <main className="mx-auto max-w-6xl p-4">
+          <main className="mx-auto max-w-7xl p-4">
             {tab==="market" && (
-              <MarketGrid fixtures={state.fixtures} players={state.players} teams={state.teams} onBuy={buyCard} />
+              <section>
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <select value={fixtureFilter} onChange={(e)=>setFixtureFilter(e.target.value)}
+                            className="rounded-xl border bg-white px-3 py-2 text-sm shadow-sm">
+                      <option value="all">All upcoming fixtures</option>
+                      {state.fixtures.filter(f=>f.status==="upcoming").map(f=>(
+                        <option key={f.id} value={f.id}>
+                          {fmtTeam(f.home, byId.team)} vs {fmtTeam(f.away, byId.team)} — {fmtTime(f.kickoff)}
+                        </option>
+                      ))}
+                    </select>
+                    <input value={query} onChange={(e)=>setQuery(e.target.value)}
+                           placeholder="Search player/team/pos..."
+                           className="w-64 rounded-xl border bg-white px-3 py-2 text-sm shadow-sm"/>
+                  </div>
+                  <button onClick={resolveAllUpcoming}
+                          className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">
+                    Resolve ALL upcoming
+                  </button>
+                </div>
+                <MarketGrid fixtures={state.fixtures} players={state.players} teams={state.teams}
+                            filterFixtureId={fixtureFilter} query={query} onBuy={buyCard}/>
+              </section>
             )}
 
             {tab==="portfolio" && (
-              <section className="grid gap-3">
-                {portfolioWithMeta.length===0 && <EmptyCard title="No cards yet" subtitle="Buy some players from the Market." />}
-                {portfolioWithMeta.map(c=>(
-                  <div key={c.id} className="border rounded-lg p-3 bg-white">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">
-                        {c.player?.name} <span className="text-slate-500 text-xs">({c.player?.pos} • {c.player?.team})</span>
-                      </div>
-                      <div className="text-sm">{c.current}c <span className={`${c.current-c.invested>=0?"text-emerald-600":"text-rose-600"}`}>({(c.roi*100).toFixed(1)}%)</span></div>
-                    </div>
-                    <div className="text-xs text-slate-500">Fixture: {c.fixture ? `${fmtTeam(c.fixture.home,byId.team)} vs ${fmtTeam(c.fixture.away,byId.team)}` : "-"}</div>
-                    {!c.soldAt && c.fixture?.status==="finished" && (
-                      <button onClick={()=>sellCard(c.id)} className="mt-2 px-3 py-1 bg-slate-900 text-white rounded text-sm">Sell</button>
-                    )}
-                    {c.soldAt && (
-                      <div className="mt-2 text-xs text-slate-600">Sold @ {c.soldAt}c</div>
-                    )}
+              <section className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border bg-white p-4 shadow-sm">
+                    <div className="text-xs text-slate-500">Balance</div>
+                    <div className="text-xl font-semibold">{state.balance.toLocaleString()}c</div>
                   </div>
-                ))}
+                  <div className="rounded-2xl border bg-white p-4 shadow-sm">
+                    <div className="text-xs text-slate-500">Open Portfolio</div>
+                    <div className="text-xl font-semibold">{portfolioValueOpen.toLocaleString()}c</div>
+                  </div>
+                  <div className="rounded-2xl border bg-white p-4 shadow-sm">
+                    <div className="text-xs text-slate-500">Net Worth</div>
+                    <div className="text-xl font-semibold">{netWorth.toLocaleString()}c</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {portfolioWithMeta.length===0 && <EmptyCard title="No cards yet" subtitle="Buy cards from the Market before kickoff." />}
+                  {portfolioWithMeta.map(c=>(
+                    <div key={c.id} className="rounded-2xl border bg-white p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <div className="text-sm text-slate-600 truncate">{c.player?.name} <span className="text-xs text-slate-500">({c.player?.pos} • {c.player?.team})</span></div>
+                          <div className="text-xs text-slate-500 truncate">Fixture: {c.fixture ? `${fmtTeam(c.fixture.home,byId.team)} vs ${fmtTeam(c.fixture.away,byId.team)}` : "-"}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm">Bought @ <span className="font-semibold">{(c.boughtPrice*c.quantity).toLocaleString()}c</span></div>
+                          <div className="text-sm">Current: <span className="font-semibold">{c.current.toLocaleString()}c</span></div>
+                          <div className={`text-sm ${c.current-c.invested>=0?"text-emerald-600":"text-rose-600"}`}>ROI: {(c.roi*100).toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="text-xs text-slate-500">{c.fixture?.status==="finished" ? "Match finished" : "Locked until full-time"}</div>
+                        <div className="flex gap-2">
+                          {!c.soldAt && c.fixture?.status==="finished" && (
+                            <button onClick={()=>sellCard(c.id)} className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-slate-800">Sell</button>
+                          )}
+                          {c.soldAt && (
+                            <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700">Sold @ {c.soldAt.toLocaleString()}c</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </section>
             )}
 
             {tab==="fixtures" && (
-              <section className="grid gap-3">
+              <section className="space-y-5">
                 {state.fixtures.map(f=>(
-                  <div key={f.id} className="border rounded-lg p-3 bg-white">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold">{fmtTeam(f.home,byId.team)} vs {fmtTeam(f.away,byId.team)}</div>
-                      <div className="text-xs text-slate-600">{f.status==="finished" ? `FT ${f.result?.homeGoals}:${f.result?.awayGoals}` : `Kickoff ${fmtTime(f.kickoff)}`}</div>
-                    </div>
-                    {f.status==="upcoming" && (
-                      <button onClick={()=>resolveFixture(f.id)} className="mt-2 px-3 py-1 bg-emerald-600 text-white rounded text-sm">Resolve</button>
-                    )}
-                  </div>
+                  <FixtureCard key={f.id}
+                    fixture={f}
+                    playersById={byId.player}
+                    teamById={byId.team}
+                    onResolve={()=>resolveFixture(f.id)}
+                    onEditStat={(pid,patch)=>editStat(f.id, pid, patch)}
+                  />
                 ))}
               </section>
             )}
 
+            {tab==="rules" && (
+              <div className="rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 className="mb-3 text-lg font-bold">How it works (Model B)</h2>
+                <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
+                  <li>You start with 1000 coins. Buy <span className="font-semibold">player cards</span> before their fixtures.</li>
+                  <li>After the match is resolved, each card’s value updates by the player’s performance.</li>
+                  <li><span className="font-semibold">P/L is unrealized</span> until you press <em>Sell</em> on a finished card.</li>
+                  <li><span className="font-semibold">Net Worth</span> = Balance + Value of all unsold (open) cards.</li>
+                </ol>
+                <h3 className="mt-5 text-base font-semibold">Scoring → Value</h3>
+                <div className="text-sm text-slate-700">
+                  <p className="mb-2">newValue = base × (1 + score/50), clamped to [0.2× base, 3× base].</p>
+                  <ul className="list-disc pl-5">
+                    <li>Team result: Win +10, Draw +3</li>
+                    <li>Minutes: &lt;60 +2, 60–89 +4, 90 +6</li>
+                    <li>Goals: FWD +8, MID +10, DEF/GK +12 each</li>
+                    <li>Assists: +6 each</li>
+                    <li>Clean sheet (DEF/GK, ≥60′, GA=0): +8</li>
+                    <li>GK saves: +1 per 3; Penalty save +8</li>
+                    <li>Cards: Yellow −3, Red −7</li>
+                    <li>Own goal −6; Missed pen −5; Pen conceded −5</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {tab==="tx" && (
-              <section className="grid gap-2">
-                {state.tx.length===0 && <EmptyCard title="No transactions" subtitle="Buys and sells will appear here." />}
-                {state.tx.map(t=>(
-                  <div key={t.id} className="border rounded p-2 bg-white text-sm">
-                    <span className="font-semibold">{t.type}</span> · {t.amount}c · <span className="text-slate-500">{new Date(t.ts).toLocaleString()}</span>
+              <section className="space-y-2">
+                {state.tx.length===0 ? (
+                  <EmptyCard title="No transactions yet" subtitle="Buys and sells will appear here." />
+                ) : (
+                  <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 text-left text-slate-600">
+                        <tr>
+                          <th className="px-4 py-3">Time</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3">Amount</th>
+                          <th className="px-4 py-3">Meta</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {state.tx.map(t=>(
+                          <tr key={t.id} className="border-t">
+                            <td className="px-4 py-3 text-slate-500">{new Date(t.ts).toLocaleString()}</td>
+                            <td className="px-4 py-3 font-semibold">{t.type}</td>
+                            <td className={`px-4 py-3 ${t.amount>=0?"text-emerald-700":"text-rose-700"}`}>{t.amount.toLocaleString()}c</td>
+                            <td className="px-4 py-3 text-slate-500 text-xs">{JSON.stringify(t.meta)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
+                )}
               </section>
             )}
           </main>
@@ -326,8 +774,7 @@
     }
 
     // --------------------------- Mount ---------------------------
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   </script>
 </body>
 </html>
