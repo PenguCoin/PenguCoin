@@ -4,33 +4,29 @@ set -e
 echo "==> Creating folders"
 mkdir -p src/app/{play/sim,players,leaderboard} src/components src/game src/lib public
 
-############################################
-# THEME / LAYOUT
-############################################
 echo "==> Writing src/app/globals.css"
 cat > src/app/globals.css <<'EOF'
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ==== FutStocks v6 theme ==== */
+/* ==== FutStocks v5 theme ==== */
 :root{
-  --bg:#151a20;          /* lighter dark */
-  --card:#1b222a;        /* surface */
-  --text:#e9eef6;        /* primary text */
-  --muted:#9db0c6;       /* secondary */
+  --bg:#14181d;          /* lighter than very dark */
+  --card:#1a2027;        /* clearer contrast */
+  --text:#e8eef5;        /* primary text */
+  --muted:#98a7bb;       /* secondary text */
   --green:#00FF85;       /* profit */
   --red:#FF3B30;         /* loss */
   --blue:#1DA1F2;        /* highlight */
   --ring:#2c8ed6;        /* focus ring */
-  --shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
 html,body{ background:var(--bg); color:var(--text); }
 *{ @apply antialiased; }
 
 @layer components{
-  .card{ @apply rounded-2xl bg-[var(--card)] p-4; box-shadow: var(--shadow); }
+  .card{ @apply rounded-2xl bg-[var(--card)] shadow p-4; }
   .btn{ @apply inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition select-none; }
   .btn-primary{ @apply bg-[var(--blue)] text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed; }
   .btn-success{ @apply bg-[var(--green)] text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed; }
@@ -47,7 +43,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FutStocks v6",
+  title: "FutStocks v5",
   description: "Fantasy football investing — web game",
 };
 
@@ -82,7 +78,7 @@ cat > src/app/page.tsx <<'EOF'
 export default function Home() {
   return (
     <section className="mt-12 text-center">
-      <h1 className="text-4xl font-black">FutStocks v6</h1>
+      <h1 className="text-4xl font-black">FutStocks v5</h1>
       <p className="mt-2 text-[var(--muted)]">Pick a team & player, run a 1‑minute sim, earn coins from performance.</p>
       <div className="mt-6 space-x-2">
         <a className="btn btn-primary" href="/play/sim">Play Quick Sim</a>
@@ -93,9 +89,8 @@ export default function Home() {
         <ul className="list-disc pl-5 subtle leading-6">
           <li>Start with 1,000 coins</li>
           <li>Select a Big Six team and player</li>
-          <li>1‑minute simulated match (events stream live)</li>
+          <li>Play a 1‑minute simulated match (events stream live)</li>
           <li>MPS (0–100) → payout = 100 × (1 + (MPS − 50)/100)</li>
-          <li>Spacebar also starts rounds on desktop</li>
         </ul>
       </div>
     </section>
@@ -115,9 +110,6 @@ export default function LeaderboardPage() {
 }
 EOF
 
-############################################
-# PLAYERS BROWSER
-############################################
 echo "==> Writing src/app/players/page.tsx"
 cat > src/app/players/page.tsx <<'EOF'
 "use client";
@@ -163,45 +155,168 @@ export default function PlayersPage(){
 }
 EOF
 
-############################################
-# GAME COMPONENTS
-############################################
+echo "==> Writing src/app/play/sim/page.tsx"
+cat > src/app/play/sim/page.tsx <<'EOF'
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { getCoins, setCoins, ensureInit, getSelection, setSelection } from "../../../lib/store";
+import { mps as computeMps, payoutFromMps, type Stats } from "../../../game/scoring";
+import { generateSim } from "../../../game/simulate";
+import GameHUD from "../../../components/GameHUD";
+import EventFeed from "../../../components/EventFeed";
+import TeamPicker from "../../../components/TeamPicker";
+import { ROSTERS, ALL_TEAMS, type Player } from "../../../lib/rosters";
+
+export default function SimPage() {
+  const [coins, setCoinsState] = useState<number>(1000);
+  const [running, setRunning] = useState(false);
+  const [timer, setTimer] = useState(60);
+  const [events, setEvents] = useState<{ t:number; text:string; delta?:number }[]>([]);
+  const [previewScore, setPreviewScore] = useState(50);
+  const [roundResult, setRoundResult] = useState<null | { score:number; payout:number; stats:Stats }>(null);
+
+  // selection
+  const [team, setTeam] = useState<string>(getSelection().team || ALL_TEAMS[0]);
+  const [player, setPlayer] = useState<Player | null>(null);
+
+  // load coins & selection
+  useEffect(() => { 
+    ensureInit(); 
+    setCoinsState(getCoins()); 
+    const sel = getSelection(); 
+    if(sel.playerName){ 
+      const p = (ROSTERS[sel.team]||[]).find(x=>x.name===sel.playerName) || null; 
+      setPlayer(p);
+    } 
+  }, []);
+
+  // countdown timer
+  useEffect(() => {
+    if (!running || timer<=0) return;
+    const id = setTimeout(()=> setTimer(t=>t-1), 1000);
+    return ()=> clearTimeout(id);
+  }, [running, timer]);
+
+  // available players for selected team
+  const teamPlayers = useMemo(()=> ROSTERS[team] || [], [team]);
+
+  const canPlay = useMemo(()=> !running && coins >= 100 && !!player, [running, coins, player]);
+
+  const startRound = async () => {
+    if (!player) return;
+    setRunning(true);
+    setRoundResult(null);
+    setTimer(60);
+    setEvents([]);
+    setPreviewScore(50);
+
+    // persist selection
+    setSelection({team, playerName: player.name});
+
+    // spend up front
+    const spent = coins - 100;
+    setCoins(spent); setCoinsState(spent);
+
+    const seed = Date.now();
+    const sim = generateSim(seed, player.pos, player.name);
+    const stepMs = Math.floor(60000 / Math.max(1, sim.events.length));
+    let i=0;
+    const pushNext = () => {
+      if(i>=sim.events.length) return finalize();
+      const ev = sim.events[i++];
+      setEvents(prev=>[...prev, ev]);
+      if(typeof ev.delta === "number"){
+        setPreviewScore(s => Math.max(0, Math.min(100, s + ev.delta)));
+      }
+      setTimeout(pushNext, stepMs);
+    };
+
+    const finalize = () => {
+      const score = computeMps(sim.playerStats);
+      const payout = payoutFromMps(score, 100);
+      setRoundResult({ score, payout, stats: sim.playerStats });
+      const credited = spent + payout;
+      setCoins(credited); setCoinsState(credited);
+      setRunning(false);
+      setTimer(0);
+    };
+
+    setTimeout(pushNext, 350);
+  };
+
+  return (
+    <section className="mt-6">
+      <GameHUD coins={coins} running={running} timer={timer} score={previewScore} />
+      <div className="mt-4 grid gap-3">
+        <TeamPicker
+          team={team}
+          setTeam={(t)=>{ setTeam(t); setPlayer(null); }}
+          players={teamPlayers}
+          player={player}
+          setPlayer={setPlayer}
+          disabled={running}
+        />
+
+        <div className="card">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold">Quick Sim</h2>
+              <p className="subtle">1‑minute round • Buy price: 100 coins</p>
+              {player ? (
+                <p className="subtle mt-1">Selected: <b>{player.name}</b> ({player.team}, {player.pos})</p>
+              ) : (
+                <p className="subtle mt-1">Pick a team & player to start.</p>
+              )}
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={startRound}
+              disabled={!canPlay}
+              aria-disabled={!canPlay}
+            >
+              {running ? "Running…" : !player ? "Select player" : coins<100 ? "Not enough coins" : "Play Round"}
+            </button>
+          </div>
+        </div>
+
+        <EventFeed events={events} />
+
+        <div className="card">
+          <h3 className="font-semibold mb-2">Result</h3>
+          {roundResult ? (
+            <div className="grid gap-1">
+              <div className="flex justify-between"><span className="subtle">MPS</span><span className="font-semibold">{roundResult.score}</span></div>
+              <div className="flex justify-between">
+                <span className="subtle">Payout</span>
+                <span className={roundResult.payout>=100 ? "text-[var(--green)] font-semibold":"text-[var(--red)] font-semibold"}>
+                  {roundResult.payout} coins {roundResult.payout>=100? " (+)":" (−)"}{Math.abs(roundResult.payout-100)}
+                </span>
+              </div>
+              <div className="subtle mt-2">
+                Team result: <b>{roundResult.stats.result}</b> • Goals: <b>{roundResult.stats.goals}</b> • Assists: <b>{roundResult.stats.assists}</b> • Pos: <b>{roundResult.stats.pos}</b>
+              </div>
+            </div>
+          ) : <p className="subtle">Start a round to see your payout.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+EOF
+
 echo "==> Writing src/components/GameHUD.tsx"
 cat > src/components/GameHUD.tsx <<'EOF'
-"use client";
-import { useEffect, useRef, useState } from "react";
-
 type Props = { coins:number; running:boolean; timer:number; score:number; };
 
 export default function GameHUD({ coins, running, timer, score }: Props){
   const timePct = Math.max(0, Math.min(100, (60 - timer) / 60 * 100));
-
-  // animated coin bump
-  const [delta, setDelta] = useState(0);
-  const prev = useRef(coins);
-  useEffect(()=>{
-    const d = coins - prev.current;
-    if(d !== 0){
-      setDelta(d);
-      const t = setTimeout(()=> setDelta(0), 800);
-      prev.current = coins;
-      return ()=> clearTimeout(t);
-    }
-  }, [coins]);
-
   return (
     <div className="card">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-[140px]">
+        <div className="min-w-[120px]">
           <div className="subtle">Coins</div>
-          <div className="text-2xl font-black truncate-1 flex items-baseline gap-2">
-            {coins}
-            {delta !== 0 && (
-              <span className={delta>0?"text-[var(--green)]":"text-[var(--red)]"} style={{transition:"transform .2s", transform:"translateY(-2px)"}}>
-                {delta>0?`+${delta}`:delta}
-              </span>
-            )}
-          </div>
+          <div className="text-2xl font-black truncate-1">{coins}</div>
         </div>
         <div className="flex-1">
           <div className="subtle mb-1 flex justify-between">
@@ -229,7 +344,7 @@ const iconFor = (text:string) => {
   if(text.includes("Assist")) return "🎯";
   if(text.includes("Yellow")) return "🟨";
   if(text.includes("Red ")) return "🟥";
-  if(text.includes("Defensive")) return "🛡️";
+  if(text.includes("Tackle") || text.includes("Interception")) return "🛡️";
   if(text.includes("Own goal") || text.includes("Error")) return "⚠️";
   return "•";
 };
@@ -302,272 +417,6 @@ export default function TeamPicker({
         ))}
       </div>
     </div>
-  );
-}
-EOF
-
-echo "==> Writing src/components/Confetti.tsx"
-cat > src/components/Confetti.tsx <<'EOF'
-"use client";
-import { useEffect, useRef } from "react";
-
-/** Lightweight canvas confetti — auto plays once when `playKey` changes */
-export default function Confetti({ playKey }: { playKey: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current!;
-    if(!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const { width, height } = canvas.getBoundingClientRect();
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
-
-    const count = 120;
-    const parts = Array.from({length: count}).map((_,i)=>({
-      x: Math.random()*canvas.width,
-      y: -Math.random()*canvas.height/2,
-      r: 4 + Math.random()*6,
-      vx: -2 + Math.random()*4,
-      vy: 2 + Math.random()*3,
-      a: Math.random()*Math.PI*2,
-      color: `hsl(${Math.random()*360}, 90%, 60%)`
-    }));
-
-    let running = true;
-    const tick = () => {
-      if(!running) return;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      parts.forEach(p=>{
-        p.x += p.vx; p.y += p.vy; p.a += 0.1;
-        p.vy += 0.02;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.a);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.r, -p.r, p.r*2, p.r*2);
-        ctx.restore();
-      });
-      requestAnimationFrame(tick);
-    };
-    tick();
-    const off = setTimeout(()=>{ running=false; }, 1500);
-    return ()=> clearTimeout(off);
-  }, [playKey]);
-
-  return <canvas ref={canvasRef} className="pointer-events-none fixed inset-0 w-full h-full" />;
-}
-EOF
-
-echo "==> Writing src/components/FX.ts"
-cat > src/components/FX.ts <<'EOF'
-// Simple SFX + haptics without external files.
-// Uses WebAudio beeps with different pitches.
-
-let ctx: AudioContext | null = null;
-function audio() { if(!ctx) ctx = new (window.AudioContext || (window as any).webkitAudioContext)(); return ctx; }
-
-function tone(freq:number, dur=0.12, type:OscillatorType='sine', gain=0.04){
-  const a = audio();
-  const osc = a.createOscillator();
-  const g = a.createGain();
-  osc.type = type; osc.frequency.value = freq;
-  g.gain.value = gain;
-  osc.connect(g); g.connect(a.destination);
-  osc.start();
-  setTimeout(()=>{ osc.stop(); }, dur*1000);
-}
-
-export function sfxGoal(){ tone(880,0.1,'square',0.06); setTimeout(()=>tone(1320,0.12,'square',0.05), 90); vibrate(40); }
-export function sfxAssist(){ tone(740,0.1,'triangle',0.05); vibrate(20); }
-export function sfxCard(){ tone(220,0.15,'sawtooth',0.05); vibrate(60); }
-export function sfxError(){ tone(180,0.18,'sawtooth',0.05); vibrate(50); }
-export function sfxTick(){ tone(520,0.05,'sine',0.02); }
-
-export function vibrate(ms:number){ if('vibrate' in navigator) (navigator as any).vibrate(ms); }
-EOF
-
-############################################
-# GAME LOGIC
-############################################
-echo "==> Writing src/app/play/sim/page.tsx"
-cat > src/app/play/sim/page.tsx <<'EOF'
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { getCoins, setCoins, ensureInit, getSelection, setSelection } from "../../../lib/store";
-import { mps as computeMps, payoutFromMps, type Stats } from "../../../game/scoring";
-import { generateSim } from "../../../game/simulate";
-import GameHUD from "../../../components/GameHUD";
-import EventFeed from "../../../components/EventFeed";
-import TeamPicker from "../../../components/TeamPicker";
-import Confetti from "../../../components/Confetti";
-import { sfxGoal, sfxAssist, sfxCard, sfxError, sfxTick } from "../../../components/FX";
-import { ROSTERS, ALL_TEAMS, type Player } from "../../../lib/rosters";
-
-export default function SimPage() {
-  const [coins, setCoinsState] = useState<number>(1000);
-  const [running, setRunning] = useState(false);
-  const [timer, setTimer] = useState(60);
-  const [events, setEvents] = useState<{ t:number; text:string; delta?:number }[]>([]);
-  const [previewScore, setPreviewScore] = useState(50);
-  const [roundResult, setRoundResult] = useState<null | { score:number; payout:number; stats:Stats }>(null);
-  const [confettiKey, setConfettiKey] = useState(0);
-
-  // selection
-  const [team, setTeam] = useState<string>(getSelection().team || ALL_TEAMS[0]);
-  const [player, setPlayer] = useState<Player | null>(null);
-
-  // load coins & selection once
-  useEffect(() => { 
-    ensureInit(); 
-    setCoinsState(getCoins()); 
-    const sel = getSelection(); 
-    if(sel.playerName){ 
-      const p = (ROSTERS[sel.team]||[]).find(x=>x.name===sel.playerName) || null; 
-      setPlayer(p);
-    } 
-  }, []);
-
-  // Keyboard: Space to start
-  useEffect(()=>{
-    const onKey = (e:KeyboardEvent) => {
-      if(e.code === "Space"){ e.preventDefault(); if(canPlay) startRound(); }
-    };
-    window.addEventListener("keydown", onKey);
-    return ()=> window.removeEventListener("keydown", onKey);
-  });
-
-  // countdown timer
-  useEffect(() => {
-    if (!running || timer<=0) return;
-    const id = setTimeout(()=> { setTimer(t=>t-1); sfxTick(); }, 1000);
-    return ()=> clearTimeout(id);
-  }, [running, timer]);
-
-  // available players for selected team
-  const teamPlayers = useMemo(()=> ROSTERS[team] || [], [team]);
-  const canPlay = useMemo(()=> !running && coins >= 100 && !!player, [running, coins, player]);
-
-  // event SFX mapper
-  function playEventSfx(text:string){
-    if(text.includes("GOAL")) sfxGoal();
-    else if(text.includes("Assist")) sfxAssist();
-    else if(text.includes("Yellow") || text.includes("Red")) sfxCard();
-    else if(text.includes("Own goal") || text.includes("Error")) sfxError();
-  }
-
-  const startRound = async () => {
-    if (!player) return;
-    setRunning(true);
-    setRoundResult(null);
-    setTimer(60);
-    setEvents([]);
-    setPreviewScore(50);
-
-    // persist selection
-    setSelection({team, playerName: player.name});
-
-    // spend up front
-    const spent = coins - 100;
-    setCoins(spent); setCoinsState(spent);
-
-    const seed = Date.now();
-    const sim = generateSim(seed, player.pos, player.name);
-    const stepMs = Math.max(350, Math.floor(60000 / Math.max(1, sim.events.length))); // smooth pacing
-    let i=0;
-    const pushNext = () => {
-      if(i>=sim.events.length) return finalize();
-      const ev = sim.events[i++];
-      setEvents(prev=>[...prev, ev]);
-      if(typeof ev.delta === "number"){
-        setPreviewScore(s => Math.max(0, Math.min(100, s + ev.delta)));
-      }
-      playEventSfx(ev.text);
-      setTimeout(pushNext, stepMs);
-    };
-
-    const finalize = () => {
-      const score = computeMps(sim.playerStats);
-      const payout = payoutFromMps(score, 100);
-      setRoundResult({ score, payout, stats: sim.playerStats });
-      const credited = spent + payout;
-      setCoins(credited); setCoinsState(credited);
-      setRunning(false);
-      setTimer(0);
-      if(payout >= 100){ setConfettiKey(k=>k+1); }
-    };
-
-    setTimeout(pushNext, 350);
-  };
-
-  const replay = () => {
-    setRoundResult(null);
-    setEvents([]);
-    setPreviewScore(50);
-  };
-
-  return (
-    <section className="mt-6">
-      {/** Confetti overlays on profit */}
-      <Confetti playKey={confettiKey} />
-      <GameHUD coins={coins} running={running} timer={timer} score={previewScore} />
-      <div className="mt-4 grid gap-3">
-        <TeamPicker
-          team={team}
-          setTeam={(t)=>{ setTeam(t); setPlayer(null); }}
-          players={teamPlayers}
-          player={player}
-          setPlayer={setPlayer}
-          disabled={running}
-        />
-
-        <div className="card">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-bold">Quick Sim</h2>
-              <p className="subtle">1‑minute round • Buy price: 100 coins • Press <b>Space</b> to start</p>
-              {player ? (
-                <p className="subtle mt-1">Selected: <b>{player.name}</b> ({player.team}, {player.pos})</p>
-              ) : (
-                <p className="subtle mt-1">Pick a team & player to start.</p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={startRound}
-                disabled={!canPlay}
-                aria-disabled={!canPlay}
-              >
-                {running ? "Running…" : !player ? "Select player" : coins<100 ? "Not enough coins" : "Play Round"}
-              </button>
-              <button className="btn btn-ghost" onClick={replay} disabled={running || events.length===0}>Replay</button>
-            </div>
-          </div>
-        </div>
-
-        <EventFeed events={events} />
-
-        <div className="card">
-          <h3 className="font-semibold mb-2">Result</h3>
-          {roundResult ? (
-            <div className="grid gap-1">
-              <div className="flex justify-between"><span className="subtle">MPS</span><span className="font-semibold">{roundResult.score}</span></div>
-              <div className="flex justify-between">
-                <span className="subtle">Payout</span>
-                <span className={roundResult.payout>=100 ? "text-[var(--green)] font-semibold":"text-[var(--red)] font-semibold"}>
-                  {roundResult.payout} coins {roundResult.payout>=100? " (+)":" (−)"}{Math.abs(roundResult.payout-100)}
-                </span>
-              </div>
-              <div className="subtle mt-2">
-                Team result: <b>{roundResult.stats.result}</b> • Goals: <b>{roundResult.stats.goals}</b> • Assists: <b>{roundResult.stats.assists}</b> • Pos: <b>{roundResult.stats.pos}</b>
-              </div>
-            </div>
-          ) : <p className="subtle">Start a round to see your payout.</p>}
-        </div>
-      </div>
-    </section>
   );
 }
 EOF
@@ -703,13 +552,10 @@ export function generateSim(seed: number, pos: Pos, playerName="Your player"): S
 }
 EOF
 
-############################################
-# PERSISTENCE + ROSTERS
-############################################
 echo "==> Writing src/lib/store.ts"
 cat > src/lib/store.ts <<'EOF'
-const COINS_KEY = "futstocks.v6.coins";
-const SEL_KEY = "futstocks.v6.selection";
+const COINS_KEY = "futstocks.v5.coins";
+const SEL_KEY = "futstocks.v5.selection";
 
 export function ensureInit() {
   if (typeof window === "undefined") return;
@@ -742,7 +588,7 @@ EOF
 
 echo "==> Writing src/lib/rosters.ts"
 cat > src/lib/rosters.ts <<'EOF'
-// FutStocks v6 — Big Six rosters (2025/26)
+// FutStocks v5 — Big Six rosters (2025/26)
 // Pos: "GK" | "D" | "M" | "F"
 
 export type Player = {
@@ -939,17 +785,14 @@ export const ROSTERS: Record<string, Player[]> = {
 export const ALL_TEAMS = Object.keys(ROSTERS);
 EOF
 
-############################################
-# PWA
-############################################
 echo "==> Writing public/manifest.json"
 cat > public/manifest.json <<'EOF'
 {
-  "name": "FutStocks v6",
+  "name": "FutStocks v5",
   "short_name": "FutStocks",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#151a20",
+  "background_color": "#14181d",
   "theme_color": "#1DA1F2",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
@@ -958,6 +801,4 @@ cat > public/manifest.json <<'EOF'
 }
 EOF
 
-echo "==> Done! Launch with: npm run dev"
-
-
+echo "==> Done! Now run:  npm run dev"
