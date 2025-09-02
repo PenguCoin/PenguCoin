@@ -294,7 +294,7 @@
     const GK = p=>p.pos===POS.GK, DEF = p=>p.pos===POS.DEF, MID = p=>p.pos===POS.MID, FWD = p=>p.pos===POS.FWD;
     const pickSome = (arr, n) => arr.slice(0, n).map(p=>p.id);
 
-    // --------------------------- Fixtures (your exact list & order) ---------------------------
+    // --------------------------- Fixtures ---------------------------
     const hoursFromNow = (h)=> { const t=new Date(); t.setHours(t.getHours()+h); return t.toISOString(); };
 
     const RAW_FIXTURES = [
@@ -431,7 +431,7 @@
     }
 
     // --------------------------- Market Grid ---------------------------
-    function MarketGrid({fixtures,players,teams,filterFixtureId,query,onBuy}){
+    function MarketGrid({fixtures,players,teams,filterFixtureId,query,onBuy,balance}){
       const teamById = Object.fromEntries(teams.map(t=>[t.id,t]));
       const fixturesShown = fixtures.filter(f=> f.status==="upcoming" && (filterFixtureId==="all" || filterFixtureId===f.id));
       const q = (query||"").trim().toLowerCase();
@@ -460,9 +460,16 @@
                       {col.ids.map(pid=>{
                         const p = players.find(x=>x.id===pid);
                         if(!p) return null;
-                        const show = !q || p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q) || p.pos.toLowerCase().includes(q);
+                        const teamName = (teamById[p.team]?.name || "").toLowerCase();
+                        const show = !q
+                          || p.name.toLowerCase().includes(q)
+                          || p.team.toLowerCase().includes(q)
+                          || teamName.includes(q)
+                          || p.pos.toLowerCase().includes(q);
                         if(!show) return null;
                         const cost = Math.round(p.basePrice * sharePct);
+                        const total = cost + TX_FEE;
+                        const disabled = balance < total;
                         return (
                           <div key={pid} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
                             <div className="min-w-0">
@@ -472,8 +479,9 @@
                             <div className="text-right">
                               <div className="text-[10px] text-slate-500 mb-1">+ fee {$fmt(TX_FEE)}</div>
                               <button onClick={()=>onBuy(p.id, f.id, 1, sharePct)}
-                                className="px-3 py-1.5 bg-slate-900 text-white rounded text-sm press-anim">
-                                Buy {Math.round(sharePct*100)}% · {$fmt(cost + TX_FEE)}
+                                disabled={disabled}
+                                className={`px-3 py-1.5 rounded text-sm press-anim ${disabled? "bg-slate-300 text-slate-500 cursor-not-allowed":"bg-slate-900 text-white"}`}>
+                                Buy {Math.round(sharePct*100)}% · {$fmt(total)}
                               </button>
                             </div>
                           </div>
@@ -500,7 +508,7 @@
             </div>
             {canQuickSell && (
               <button onClick={onQuickSell} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white press-anim">
-                Quick Sell (all shares) − {$fmt(TX_FEE)}
+                Quick Sell (all shares) − {$fmt(TX_FEE)} each
               </button>
             )}
           </div>
@@ -622,7 +630,7 @@
         if(!p || !f || f.status!=="upcoming") return;
         const itemCost = Math.round(p.basePrice * sharePct);
         const total = itemCost * qty + TX_FEE; // include fee
-        if(state.balance < total) return alert("Not enough funds.");
+        if(state.balance < total) return;
 
         const item = {
           id:`card_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
@@ -646,7 +654,7 @@
         if(!card || card.soldAt) return;
         const player = byId.player[card.playerId];
         const fixture = byId.fixture[card.fixtureId];
-        if(!fixture || fixture.status!=="finished") return alert("Match not finished yet.");
+        if(!fixture || fixture.status!=="finished") return;
         const stat = fixture.result?.stats?.[card.playerId] || {};
         const teamRes = teamResultForPlayer(card.playerId, fixture);
         const score = scoreForPlayer(stat, player.pos, teamRes);
@@ -666,7 +674,7 @@
       // QUICK SELL: sell all unsold cards for a specific (playerId, fixtureId)
       function quickSellByPlayerFixture(playerId, fixtureId){
         const f = byId.fixture[fixtureId];
-        if(!f || f.status!=="finished") return alert("Match not finished yet.");
+        if(!f || f.status!=="finished") return;
         const player = byId.player[playerId];
         const stat = f.result?.stats?.[playerId] || {};
         const teamRes = teamResultForPlayer(playerId, f);
@@ -686,7 +694,7 @@
           return c;
         });
 
-        if(netCredit === 0 && grossTotal === 0) return; // nothing to sell
+        if(netCredit === 0 && grossTotal === 0) return;
 
         setState(s=>({
           ...s,
@@ -722,7 +730,24 @@
       }
 
       function resolveAllUpcoming(){
-        state.fixtures.filter(f=>f.status==="upcoming").forEach(f=> resolveFixture(f.id));
+        setState(s => {
+          const playerById = Object.fromEntries(s.players.map(p => [p.id, p]));
+          const nextFixtures = s.fixtures.map(f => {
+            if (f.status !== "upcoming") return f;
+            const homeGoals = randInt(0,4);
+            const awayGoals = randInt(0,4);
+            const stats = {};
+            for (const pid of [...f.homePlayers, ...f.awayPlayers]) {
+              const p = playerById[pid];
+              const isHome = f.homePlayers.includes(pid);
+              const gf = isHome ? homeGoals : awayGoals;
+              const ga = isHome ? awayGoals : homeGoals;
+              stats[pid] = randomStatline(p.pos, gf, ga);
+            }
+            return { ...f, status: "finished", result: { homeGoals, awayGoals, stats } };
+          });
+          return { ...s, fixtures: nextFixtures };
+        });
       }
 
       function editStat(fixtureId, playerId, patch){
@@ -755,6 +780,42 @@
       });
       const portfolioValueOpen = portfolioWithMeta.filter(c=>!c.soldAt).reduce((s,c)=>s+c.current,0);
       const netWorth = state.balance + portfolioValueOpen;
+
+      // Live updates via optional WebSocket (server not required)
+      useEffect(()=>{
+        let ws;
+        try {
+          ws = new WebSocket('ws://localhost:4000/live');
+          ws.onmessage = (evt) => {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'fixture_finished') {
+              setState(s => {
+                const idx = s.fixtures.findIndex(f => f.id === msg.fixtureId);
+                if (idx === -1) return s;
+                const f = s.fixtures[idx];
+                const result = msg.result?.stats ? msg.result : {
+                  ...msg.result,
+                  stats: (() => {
+                    const stats = {};
+                    const playerById = Object.fromEntries(s.players.map(p => [p.id, p]));
+                    for (const pid of [...f.homePlayers, ...f.awayPlayers]) {
+                      const p = playerById[pid];
+                      const isHome = f.homePlayers.includes(pid);
+                      const gf = isHome ? msg.result.homeGoals : msg.result.awayGoals;
+                      const ga = isHome ? msg.result.awayGoals : msg.result.homeGoals;
+                      stats[pid] = randomStatline(p.pos, gf, ga);
+                    }
+                    return stats;
+                  })()
+                };
+                const updated = { ...f, status: 'finished', result };
+                return { ...s, fixtures: s.fixtures.map((fx,i)=> i===idx ? updated : fx) };
+              });
+            }
+          };
+        } catch {}
+        return ()=> { try { ws && ws.close(); } catch {} };
+      }, []);
 
       // --------------------------- UI ---------------------------
       return (
@@ -805,7 +866,7 @@
                   </button>
                 </div>
                 <MarketGrid fixtures={state.fixtures} players={state.players} teams={state.teams}
-                            filterFixtureId={fixtureFilter} query={query} onBuy={buyCard}/>
+                            filterFixtureId={fixtureFilter} query={query} onBuy={buyCard} balance={state.balance}/>
               </section>
             )}
 
@@ -844,8 +905,17 @@
                             <span className="text-xs text-slate-500"> ({Math.round(c.sharePct*100)}%)</span>
                           </div>
                           <div className="text-[10px] text-slate-500">+ buy fee {$fmt(TX_FEE)} (already included)</div>
-                          <div className="text-sm">Current: <span className="font-semibold">{$fmt(c.current)}</span></div>
-                          <div className={`text-sm ${c.current-c.invested>=0?"text-emerald-600":"text-rose-600"}`}>ROI: {(c.roi*100).toFixed(1)}%</div>
+
+                          {!c.soldAt ? (
+                            <>
+                              <div className="text-sm">Current: <span className="font-semibold">{$fmt(c.current)}</span></div>
+                              <div className={`text-sm ${c.current-c.invested>=0?"text-emerald-600":"text-rose-600"}`}>ROI (gross): {(c.roi*100).toFixed(1)}%</div>
+                            </>
+                          ) : (
+                            <div className={`text-sm ${(c.soldAt - c.invested)>=0?"text-emerald-600":"text-rose-600"}`}>
+                              Realized ROI: {(((c.soldAt - c.invested) / c.invested) * 100).toFixed(1)}%
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
@@ -935,7 +1005,7 @@
             )}
           </main>
 
-          <Toast show={!!toast}>{toast?.message || ""}</Toast>
+          {toast && <Toast show>{toast.message}</Toast>}
         </div>
       );
     }
@@ -945,7 +1015,6 @@
   </script>
 </body>
 </html>
-
 
 
 
