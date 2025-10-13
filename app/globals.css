@@ -3,20 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-rgb: 0, 0, 0;
-  }
+  /* Light Bone White Theme */
+  --bg-primary: #FAF9F6;
+  --bg-secondary: #F9F6F2;
+  --bg-tertiary: #FFFFFF;
+  --bg-hover: #f0ede8;
+  --border-color: #d4cfc7;
+  --text-primary: #1A1A1A;
+  --text-secondary: #2C3E50;
+  --text-muted: #6b7280;
+  --accent-primary: #2C3E50;
+  --accent-secondary: #2d5a3d;
+  --accent-success: #27ae60;
+  --accent-warning: #f39c12;
+  --accent-danger: #c0392b;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 /* Custom Animations */
