@@ -48,7 +48,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Generate token
-    const token = generateToken(user._id.toString(), user.isAdmin);
+    const token = generateToken((user._id as any).toString(), user.isAdmin);
 
     // Set cookie
     res.cookie('token', token, {
@@ -100,7 +100,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate token
-    const token = generateToken(user._id.toString(), user.isAdmin);
+    const token = generateToken((user._id as any).toString(), user.isAdmin);
 
     // Set cookie
     res.cookie('token', token, {

@@ -35,7 +35,7 @@ export const authenticate = async (
     }
 
     req.user = {
-      id: user._id.toString(),
+      id: (user._id as any).toString(),
       isAdmin: user.isAdmin
     };
 
