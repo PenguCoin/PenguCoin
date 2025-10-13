@@ -1,0 +1,10 @@
+git add vercel.json
+git commit -m "Add vercel config for static site"
+git push
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev:client",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
+}
