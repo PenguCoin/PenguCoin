@@ -10,11 +10,10 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLinks = [
+  const navLinks = user ? [
+    { href: '/dashboard', label: 'Dashboard' },
+  ] : [
     { href: '/', label: 'Home' },
-    { href: '/market', label: 'Market' },
-    { href: '/portfolio', label: 'Portfolio' },
-    { href: '/leaderboard', label: 'Leaderboard' }
   ];
 
   if (user?.isAdmin) {
