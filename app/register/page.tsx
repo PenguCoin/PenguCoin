@@ -18,7 +18,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/market');
+      router.push('/dashboard');
     }
   }, [user, router]);
 
@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
     try {
       await register(username, email, password);
-      router.push('/market');
+      router.push('/dashboard');
     } catch (error) {
       // Error handled by toast in auth context
     } finally {

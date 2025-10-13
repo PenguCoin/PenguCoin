@@ -11,7 +11,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      router.push('/market');
+      router.push('/dashboard');
     }
   }, [user, router]);
 
@@ -74,7 +74,7 @@ export default function Home() {
             <div className="text-4xl mb-4">🏆</div>
             <h3 className="text-xl font-bold mb-3 text-gray-900">Compete & Win</h3>
             <p className="text-gray-600">
-              Climb the leaderboard and prove you're the best investor. Track your portfolio value in real-time.
+              Climb the leaderboard and prove you&apos;re the best investor. Track your portfolio value in real-time.
             </p>
           </div>
         </div>

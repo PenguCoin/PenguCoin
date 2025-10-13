@@ -7,6 +7,7 @@ import { playersApi, portfolioApi } from '@/lib/api';
 import { Player } from '@/lib/types';
 import PlayerCard from '@/components/PlayerCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import DashboardNav from '@/components/DashboardNav';
 import toast from 'react-hot-toast';
 
 export default function MarketPage() {
@@ -22,18 +23,6 @@ export default function MarketPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [buying, setBuying] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    fetchPlayers();
-  }, [user, router]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [players, filter, sortBy, searchQuery]);
 
   const fetchPlayers = async () => {
     try {
@@ -78,6 +67,20 @@ export default function MarketPage() {
     setFilteredPlayers(result);
   };
 
+  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    fetchPlayers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router]);
+
+  useEffect(() => {
+    applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [players, filter, sortBy, searchQuery]);
+
   const handleBuy = (player: Player) => {
     setSelectedPlayer(player);
     setQuantity(1);
@@ -119,11 +122,13 @@ export default function MarketPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Player Market</h1>
-        <p className="text-gray-600">Browse and invest in football players</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNav />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Player Market</h1>
+          <p className="text-gray-600">Browse and invest in football players</p>
+        </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
@@ -247,6 +252,7 @@ export default function MarketPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/market');
+      router.push('/dashboard');
     }
   }, [user, router]);
 
@@ -25,7 +25,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/market');
+      router.push('/dashboard');
     } catch (error) {
       // Error handled by toast in auth context
     } finally {
@@ -94,7 +94,7 @@ export default function LoginPage() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign up here
               </Link>

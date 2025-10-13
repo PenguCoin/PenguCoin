@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { leaderboardApi } from '@/lib/api';
 import { LeaderboardEntry } from '@/lib/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import DashboardNav from '@/components/DashboardNav';
 import toast from 'react-hot-toast';
 
 export default function LeaderboardPage() {
@@ -34,11 +35,13 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Leaderboard</h1>
-        <p className="text-gray-600">Top investors ranked by total wealth</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNav />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Leaderboard</h1>
+          <p className="text-gray-600">Top investors ranked by total wealth</p>
+        </div>
 
       {/* Top 3 Podium */}
       {leaderboard.length >= 3 && (
@@ -149,6 +152,7 @@ export default function LeaderboardPage() {
           <p className="text-gray-500 text-lg">No data available yet</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

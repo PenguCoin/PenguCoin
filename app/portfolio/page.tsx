@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { portfolioApi } from '@/lib/api';
 import { Portfolio, Transaction } from '@/lib/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import DashboardNav from '@/components/DashboardNav';
 import toast from 'react-hot-toast';
 
 export default function PortfolioPage() {
@@ -80,8 +81,10 @@ export default function PortfolioPage() {
   const totalWealth = portfolio ? portfolio.totalValue + (user?.balance || 0) : 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">My Portfolio</h1>
+    <div className="min-h-screen bg-gray-50">
+      <DashboardNav />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">My Portfolio</h1>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -262,6 +265,7 @@ export default function PortfolioPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
