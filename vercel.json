@@ -1,4 +1,8 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "framework": null
+}{
   "buildCommand": "npm run build",
   "devCommand": "npm run dev:client",
   "installCommand": "npm install",
