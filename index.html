@@ -13,12 +13,296 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
+
+    // Icon Components
     const Users = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>);
     const TrendingUp = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>);
     const Mail = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>);
     const Search = ({ size = 24, className = "" }) => (<svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>);
     const Check = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>);
     const AlertCircle = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>);
+    const X = ({ size = 24 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
+
+    // Form Bar Component - shows last 5 game ratings
+    const FormBar = ({ formRatings }) => {
+      const getBarColor = (rating) => {
+        if (rating >= 7.5) return 'bg-green-500';
+        if (rating >= 6.5) return 'bg-yellow-500';
+        if (rating >= 5) return 'bg-orange-500';
+        return 'bg-red-500';
+      };
+
+      return (
+        <div className="flex gap-1 items-end" style={{ height: '40px' }}>
+          {formRatings.map((rating, index) => {
+            const height = (rating / 10) * 100;
+            return (
+              <div
+                key={index}
+                className="relative group"
+                style={{ flex: 1 }}
+                title={`Game ${index + 1}: ${rating.toFixed(1)}`}
+              >
+                <div
+                  className={`${getBarColor(rating)} w-full rounded-t transition-all duration-200 hover:opacity-80`}
+                  style={{ height: `${height}%` }}
+                />
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  {rating.toFixed(1)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    // Attribute Bar Component
+    const AttributeBar = ({ label, value, maxValue = 100 }) => {
+      const percentage = (value / maxValue) * 100;
+      const getColor = () => {
+        if (percentage >= 75) return 'bg-green-500';
+        if (percentage >= 50) return 'bg-yellow-500';
+        return 'bg-red-500';
+      };
+
+      return (
+        <div className="mb-3">
+          <div className="flex justify-between mb-1">
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+            <span className="text-sm font-semibold text-gray-900">{value}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div className={`${getColor()} h-2.5 rounded-full transition-all duration-300`} style={{ width: `${percentage}%` }}></div>
+          </div>
+        </div>
+      );
+    };
+
+    // Performance Chart Component
+    const PerformanceChart = ({ ratings }) => {
+      const maxRating = 10;
+      const chartHeight = 120;
+
+      return (
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Last 10 Games</h4>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-end justify-between h-32 gap-1">
+              {ratings.map((rating, index) => {
+                const height = (rating / maxRating) * 100;
+                const getColor = () => {
+                  if (rating >= 7.5) return 'bg-green-500';
+                  if (rating >= 6.5) return 'bg-yellow-500';
+                  return 'bg-red-500';
+                };
+
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="relative w-full bg-gray-200 rounded-t" style={{ height: chartHeight + 'px' }}>
+                      <div className={`${getColor()} absolute bottom-0 w-full rounded-t transition-all duration-300`} style={{ height: height + '%' }}></div>
+                    </div>
+                    <span className="text-xs text-gray-600 font-medium">{rating.toFixed(1)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between mt-2 pt-2 border-t border-gray-200">
+              <span className="text-xs text-gray-500">Game 1</span>
+              <span className="text-xs text-gray-500">Game 10</span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // Player Stats Modal Component
+    const PlayerStatsModal = ({ player, onClose, onBuy, onSell, balance, isInSquad }) => {
+      if (!player) return null;
+
+      const getRatingColor = (rating) => {
+        if (rating >= 85) return 'bg-green-500';
+        if (rating >= 75) return 'bg-yellow-500';
+        return 'bg-red-500';
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-[#FAF9F6] rounded-lg shadow-2xl max-w-4xl w-full my-8 animate-slideUp">
+            <div className="bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Player Profile</h2>
+              <button onClick={onClose} className="p-1 hover:bg-white hover:bg-opacity-20 rounded transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-32 h-32 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center text-white relative">
+                      <span className="text-5xl font-bold">{player.jerseyNumber}</span>
+                      <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-2xl font-bold text-teal-600">{player.rating}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="text-3xl font-bold text-gray-900 mb-2">{player.name}</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-600">Position:</span>
+                        <span className="ml-2 px-3 py-1 bg-teal-100 text-teal-800 rounded font-semibold">{player.position}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Age:</span>
+                        <span className="ml-2 font-semibold text-gray-900">{player.age} years</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Nationality:</span>
+                        <span className="ml-2 font-semibold text-gray-900">{player.nationality}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Current Club:</span>
+                        <span className="ml-2 font-semibold text-gray-900">{isInSquad ? 'FC United' : player.club}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Market Value:</span>
+                        <span className="ml-2 font-bold text-green-600">£{(player.value / 1000000).toFixed(1)}M</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Weekly Wage:</span>
+                        <span className="ml-2 font-bold text-red-600">£{(player.wage / 1000).toFixed(0)}k/wk</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">Overall Rating</span>
+                        <span className="text-sm font-bold text-gray-900">{player.rating}/99</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div className={`${getRatingColor(player.rating)} h-3 rounded-full transition-all duration-300`} style={{ width: `${(player.rating / 99) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Season Statistics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600">{player.seasonStats.gamesPlayed}</div>
+                    <div className="text-xs text-gray-600 mt-1">Games Played</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600">{player.seasonStats.gamesStarted}</div>
+                    <div className="text-xs text-gray-600 mt-1">Games Started</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600">{player.seasonStats.minutesPlayed}</div>
+                    <div className="text-xs text-gray-600 mt-1">Minutes Played</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600">{player.seasonStats.goals}</div>
+                    <div className="text-xs text-gray-600 mt-1">Goals Scored</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600">{player.seasonStats.assists}</div>
+                    <div className="text-xs text-gray-600 mt-1">Assists</div>
+                  </div>
+                  {player.seasonStats.cleanSheets > 0 && (
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <div className="text-2xl font-bold text-teal-600">{player.seasonStats.cleanSheets}</div>
+                      <div className="text-xs text-gray-600 mt-1">Clean Sheets</div>
+                    </div>
+                  )}
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-yellow-600">{player.seasonStats.yellowCards}</div>
+                    <div className="text-xs text-gray-600 mt-1">Yellow Cards</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600">{player.seasonStats.redCards}</div>
+                    <div className="text-xs text-gray-600 mt-1">Red Cards</div>
+                  </div>
+                  <div className="text-center p-3 bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg border-2 border-teal-300">
+                    <div className="text-2xl font-bold text-teal-700">{player.seasonStats.averageRating}</div>
+                    <div className="text-xs text-gray-700 mt-1 font-semibold">Average Rating</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Attribute Breakdown</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-teal-600 mb-3">Technical</h4>
+                    <AttributeBar label="Passing" value={player.attributes.technical.passing} />
+                    <AttributeBar label="Shooting" value={player.attributes.technical.shooting} />
+                    <AttributeBar label="Dribbling" value={player.attributes.technical.dribbling} />
+                    <AttributeBar label="First Touch" value={player.attributes.technical.firstTouch} />
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-purple-600 mb-3">Mental</h4>
+                    <AttributeBar label="Vision" value={player.attributes.mental.vision} />
+                    <AttributeBar label="Decision Making" value={player.attributes.mental.decisionMaking} />
+                    <AttributeBar label="Composure" value={player.attributes.mental.composure} />
+                    <AttributeBar label="Work Rate" value={player.attributes.mental.workRate} />
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-semibold text-orange-600 mb-3">Physical</h4>
+                    <AttributeBar label="Pace" value={player.attributes.physical.pace} />
+                    <AttributeBar label="Stamina" value={player.attributes.physical.stamina} />
+                    <AttributeBar label="Strength" value={player.attributes.physical.strength} />
+                    <AttributeBar label="Jumping" value={player.attributes.physical.jumping} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 border-b pb-2">Performance Chart</h3>
+                <PerformanceChart ratings={player.gameRatings} />
+              </div>
+
+              <div className="flex gap-4">
+                {!isInSquad && (
+                  <button
+                    onClick={() => { onBuy(player); onClose(); }}
+                    disabled={balance < player.value}
+                    className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                      balance >= player.value
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {balance >= player.value ? `Buy Player - £${(player.value / 1000000).toFixed(1)}M` : 'Insufficient Funds'}
+                  </button>
+                )}
+                {isInSquad && (
+                  <button
+                    onClick={() => { onSell(player); onClose(); }}
+                    className="flex-1 py-3 px-6 bg-red-600 text-white rounded-lg font-semibold text-lg hover:bg-red-700 transition-colors"
+                  >
+                    Sell Player - £{(player.value / 1000000).toFixed(1)}M
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     const FootballManager = () => {
       const [activeTab, setActiveTab] = useState('squad');
       const [balance, setBalance] = useState(50000000);
@@ -29,48 +313,775 @@
       const [selectedPlayer, setSelectedPlayer] = useState(null);
       const [toast, setToast] = useState(null);
       const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+      const [showStatsModal, setShowStatsModal] = useState(false);
+      const [statsPlayer, setStatsPlayer] = useState(null);
+
+      // Week system
+      const [currentWeek, setCurrentWeek] = useState(1);
+      const [secondsUntilPayment, setSecondsUntilPayment] = useState(60);
+
+      // Generate form ratings (5 ratings between 5-8)
+      const generateFormRatings = (playerId) => {
+        const seed = playerId * 73;
+        return Array.from({ length: 5 }, (_, i) => {
+          const random = ((seed + i * 31) % 30) / 10;
+          return Math.min(8, Math.max(5, 5 + random));
+        });
+      };
+
+      // Generate ownership percentage (0-100%)
+      const generateOwnership = (playerId, rating) => {
+        const seed = playerId * 97;
+        const baseOwnership = (rating - 70) * 3; // Higher rated = more ownership
+        const variance = (seed % 40) - 20;
+        return Math.min(100, Math.max(0, baseOwnership + variance));
+      };
+
       const initialSquad = [
-        { id: 1, name: 'Marcus Sterling', position: 'GK', age: 28, rating: 85, value: 15000000, wage: 80000, contract: '2026', morale: 'high' },
-        { id: 2, name: 'Ricardo Silva', position: 'CB', age: 26, rating: 82, value: 25000000, wage: 95000, contract: '2027', morale: 'high' },
-        { id: 3, name: 'James Thompson', position: 'CB', age: 29, rating: 84, value: 22000000, wage: 90000, contract: '2025', morale: 'medium' },
-        { id: 4, name: 'Ahmed Al-Rashid', position: 'LB', age: 24, rating: 80, value: 18000000, wage: 70000, contract: '2027', morale: 'high' },
-        { id: 5, name: 'Lucas Fernandez', position: 'RB', age: 27, rating: 81, value: 20000000, wage: 75000, contract: '2026', morale: 'medium' },
-        { id: 6, name: 'Kevin De Vries', position: 'CM', age: 25, rating: 86, value: 35000000, wage: 120000, contract: '2028', morale: 'high' },
-        { id: 7, name: 'Yuki Tanaka', position: 'CM', age: 23, rating: 79, value: 16000000, wage: 65000, contract: '2027', morale: 'high' },
-        { id: 8, name: 'Marco Rossi', position: 'CAM', age: 26, rating: 83, value: 28000000, wage: 100000, contract: '2026', morale: 'medium' },
-        { id: 9, name: 'Pierre Dubois', position: 'LW', age: 24, rating: 82, value: 30000000, wage: 95000, contract: '2027', morale: 'high' },
-        { id: 10, name: 'Carlos Martinez', position: 'RW', age: 22, rating: 81, value: 32000000, wage: 90000, contract: '2028', morale: 'high' },
-        { id: 11, name: 'Viktor Petrov', position: 'ST', age: 28, rating: 87, value: 45000000, wage: 150000, contract: '2026', morale: 'medium' },
-      ];
+        { id: 1, name: 'Marcus Sterling', position: 'GK', age: 28, rating: 85, value: 15000000, wage: 80000 },
+        { id: 2, name: 'Ricardo Silva', position: 'CB', age: 26, rating: 82, value: 25000000, wage: 95000 },
+        { id: 3, name: 'James Thompson', position: 'CB', age: 29, rating: 84, value: 22000000, wage: 90000 },
+        { id: 4, name: 'Ahmed Al-Rashid', position: 'LB', age: 24, rating: 80, value: 18000000, wage: 70000 },
+        { id: 5, name: 'Lucas Fernandez', position: 'RB', age: 27, rating: 81, value: 20000000, wage: 75000 },
+        { id: 6, name: 'Kevin De Vries', position: 'CM', age: 25, rating: 86, value: 35000000, wage: 120000 },
+        { id: 7, name: 'Yuki Tanaka', position: 'CM', age: 23, rating: 79, value: 16000000, wage: 65000 },
+        { id: 8, name: 'Marco Rossi', position: 'CAM', age: 26, rating: 83, value: 28000000, wage: 100000 },
+        { id: 9, name: 'Pierre Dubois', position: 'LW', age: 24, rating: 82, value: 30000000, wage: 95000 },
+        { id: 10, name: 'Carlos Martinez', position: 'RW', age: 22, rating: 81, value: 32000000, wage: 90000 },
+        { id: 11, name: 'Viktor Petrov', position: 'ST', age: 28, rating: 87, value: 45000000, wage: 150000 },
+      ].map(p => ({ ...p, form: generateFormRatings(p.id), ownership: generateOwnership(p.id, p.rating) }));
+
       const availablePlayers = [
-        { id: 101, name: 'David Anderson', position: 'GK', age: 25, rating: 80, value: 12000000, club: 'City Rovers' },
-        { id: 102, name: 'Stefan Kovac', position: 'CB', age: 27, rating: 83, value: 23000000, club: 'Athletic Madrid' },
-        { id: 103, name: 'Joao Santos', position: 'CB', age: 24, rating: 81, value: 19000000, club: 'Porto FC' },
-        { id: 104, name: 'Miguel Herrera', position: 'LB', age: 26, rating: 82, value: 21000000, club: 'Barcelona B' },
-        { id: 105, name: 'Thomas Muller Jr', position: 'RB', age: 23, rating: 79, value: 17000000, club: 'Bayern Youth' },
-        { id: 106, name: 'Alessandro Bruno', position: 'CM', age: 25, rating: 84, value: 30000000, club: 'AC Milan' },
-        { id: 107, name: 'Liam OBrien', position: 'CM', age: 28, rating: 82, value: 24000000, club: 'Celtic FC' },
-        { id: 108, name: 'Andre Gomes', position: 'CAM', age: 26, rating: 85, value: 32000000, club: 'Benfica' },
-        { id: 109, name: 'Erik Svensson', position: 'LW', age: 22, rating: 80, value: 26000000, club: 'Ajax' },
-        { id: 110, name: 'Gabriel Souza', position: 'RW', age: 24, rating: 83, value: 29000000, club: 'Flamengo' },
-        { id: 111, name: 'Robert Lewandowski II', position: 'ST', age: 23, rating: 85, value: 40000000, club: 'Dortmund' },
-        { id: 112, name: 'Francesco Totti Jr', position: 'ST', age: 21, rating: 81, value: 28000000, club: 'Roma Youth' },
-      ];
+        { id: 101, name: 'David Anderson', position: 'GK', age: 25, rating: 80, value: 12000000, wage: 60000, club: 'City Rovers' },
+        { id: 102, name: 'Stefan Kovac', position: 'CB', age: 27, rating: 83, value: 23000000, wage: 92000, club: 'Athletic Madrid' },
+        { id: 103, name: 'Joao Santos', position: 'CB', age: 24, rating: 81, value: 19000000, wage: 76000, club: 'Porto FC' },
+        { id: 104, name: 'Miguel Herrera', position: 'LB', age: 26, rating: 82, value: 21000000, wage: 84000, club: 'Barcelona B' },
+        { id: 105, name: 'Thomas Muller Jr', position: 'RB', age: 23, rating: 79, value: 17000000, wage: 68000, club: 'Bayern Youth' },
+        { id: 106, name: 'Alessandro Bruno', position: 'CM', age: 25, rating: 84, value: 30000000, wage: 120000, club: 'AC Milan' },
+        { id: 107, name: 'Liam OBrien', position: 'CM', age: 28, rating: 82, value: 24000000, wage: 96000, club: 'Celtic FC' },
+        { id: 108, name: 'Andre Gomes', position: 'CAM', age: 26, rating: 85, value: 32000000, wage: 128000, club: 'Benfica' },
+        { id: 109, name: 'Erik Svensson', position: 'LW', age: 22, rating: 80, value: 26000000, wage: 104000, club: 'Ajax' },
+        { id: 110, name: 'Gabriel Souza', position: 'RW', age: 24, rating: 83, value: 29000000, wage: 116000, club: 'Flamengo' },
+        { id: 111, name: 'Robert Lewandowski II', position: 'ST', age: 23, rating: 85, value: 40000000, wage: 160000, club: 'Dortmund' },
+        { id: 112, name: 'Francesco Totti Jr', position: 'ST', age: 21, rating: 81, value: 28000000, wage: 112000, club: 'Roma Youth' },
+      ].map(p => ({ ...p, form: generateFormRatings(p.id), ownership: generateOwnership(p.id, p.rating) }));
+
       const [squad, setSquad] = useState(initialSquad);
       const [market, setMarket] = useState(availablePlayers);
       const [transactions, setTransactions] = useState([]);
-      const showToast = (message, type = 'info') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
-      const formatCurrency = (amount) => { return `£${(amount / 1000000).toFixed(1)}M`; };
-      const handleSort = (key) => { let direction = 'asc'; if (sortConfig.key === key && sortConfig.direction === 'asc') { direction = 'desc'; } setSortConfig({ key, direction }); };
-      const sortedSquad = [...squad].sort((a, b) => { if (sortConfig.key) { const aVal = a[sortConfig.key]; const bVal = b[sortConfig.key]; if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1; if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1; } return 0; });
-      const filteredMarket = market.filter(player => { const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()); const matchesPosition = positionFilter === 'all' || player.position === positionFilter; return matchesSearch && matchesPosition; });
-      const handleSell = (player) => { setSelectedPlayer(player); setModalType('sell'); setShowModal(true); };
-      const handleBuy = (player) => { setSelectedPlayer(player); setModalType('buy'); setShowModal(true); };
-      const confirmSell = () => { const newSquad = squad.filter(p => p.id !== selectedPlayer.id); setSquad(newSquad); setBalance(balance + selectedPlayer.value); const transaction = { type: 'sell', player: selectedPlayer.name, amount: selectedPlayer.value, timestamp: new Date().toISOString() }; setTransactions([transaction, ...transactions]); setMarket([...market, { ...selectedPlayer, club: 'Free Agent' }]); showToast(`Sold ${selectedPlayer.name} for ${formatCurrency(selectedPlayer.value)}`, 'success'); setShowModal(false); };
-      const confirmBuy = () => { if (balance >= selectedPlayer.value) { const newPlayer = { ...selectedPlayer, contract: '2028', morale: 'high', wage: Math.floor(selectedPlayer.value * 0.002) }; setSquad([...squad, newPlayer]); setBalance(balance - selectedPlayer.value); const transaction = { type: 'buy', player: selectedPlayer.name, amount: selectedPlayer.value, timestamp: new Date().toISOString() }; setTransactions([transaction, ...transactions]); setMarket(market.filter(p => p.id !== selectedPlayer.id)); showToast(`Signed ${selectedPlayer.name} for ${formatCurrency(selectedPlayer.value)}`, 'success'); setShowModal(false); } else { showToast('Insufficient funds!', 'error'); } };
-      const getMoraleColor = (morale) => { if (morale === 'high') return 'bg-green-500'; if (morale === 'medium') return 'bg-yellow-500'; return 'bg-red-500'; };
-      return (<div className="min-h-screen bg-[#FAF9F6] text-[#2C3E50]">{toast && (<div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white flex items-center gap-2`}>{toast.type === 'success' && <Check size={20} />}{toast.type === 'error' && <AlertCircle size={20} />}<span>{toast.message}</span></div>)}<header className="bg-white shadow-sm border-b border-gray-200"><div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center"><div className="flex items-center gap-4"><div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">FC</div><div><h1 className="text-xl font-bold">FC United</h1><p className="text-sm text-gray-600">Manager: Alex Ferguson</p></div></div><div className="flex items-center gap-6"><div className="text-right"><p className="text-sm text-gray-600">Balance</p><p className={`text-2xl font-bold ${balance < 10000000 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(balance)}</p></div></div></div></header><nav className="bg-white border-b border-gray-200"><div className="max-w-7xl mx-auto px-4"><div className="flex gap-1">{[{ id: 'squad', label: 'Squad', icon: Users },{ id: 'players', label: 'All Players', icon: Users },{ id: 'transfers', label: 'Transfer Market', icon: TrendingUp },{ id: 'inbox', label: 'Inbox', icon: Mail },].map(tab => { const Icon = tab.icon; return (<button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors ${activeTab === tab.id ? 'border-teal-600 text-teal-600 bg-teal-50' : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}><Icon size={18} />{tab.label}</button>); })}</div></div></nav><main className="max-w-7xl mx-auto px-4 py-6">{activeTab === 'squad' && (<div><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">Your Squad</h2><select value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg"><option value="all">All Positions</option><option value="GK">Goalkeeper</option><option value="CB">Center Back</option><option value="LB">Left Back</option><option value="RB">Right Back</option><option value="CM">Center Mid</option><option value="CAM">Attacking Mid</option><option value="LW">Left Wing</option><option value="RW">Right Wing</option><option value="ST">Striker</option></select></div><div className="bg-white rounded-lg shadow overflow-x-auto"><table className="w-full"><thead className="bg-gray-50 border-b border-gray-200"><tr>{['name', 'position', 'age', 'rating', 'value', 'wage', 'contract', 'morale'].map(key => (<th key={key} onClick={() => handleSort(key)} className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100">{key.charAt(0).toUpperCase() + key.slice(1)}</th>))}<th className="px-6 py-3"></th></tr></thead><tbody className="divide-y divide-gray-200">{sortedSquad.map(player => (<tr key={player.id} className="hover:bg-gray-50"><td className="px-6 py-4 font-medium">{player.name}</td><td className="px-6 py-4"><span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">{player.position}</span></td><td className="px-6 py-4">{player.age}</td><td className="px-6 py-4"><span className="font-semibold text-teal-600">{player.rating}</span></td><td className="px-6 py-4">{formatCurrency(player.value)}</td><td className="px-6 py-4">£{(player.wage / 1000).toFixed(0)}k/wk</td><td className="px-6 py-4">{player.contract}</td><td className="px-6 py-4"><div className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${getMoraleColor(player.morale)}`}></div><span className="text-sm capitalize">{player.morale}</span></div></td><td className="px-6 py-4"><button onClick={() => handleSell(player)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Sell</button></td></tr>))}</tbody></table></div></div>)}{activeTab === 'players' && (<div><h2 className="text-2xl font-bold mb-6">All Players Database</h2><div className="bg-white rounded-lg shadow overflow-x-auto"><table className="w-full"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Position</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Age</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rating</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Value</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th><th className="px-6 py-3"></th></tr></thead><tbody className="divide-y divide-gray-200">{[...squad, ...market].map(player => { const inSquad = squad.some(p => p.id === player.id); return (<tr key={player.id} className="hover:bg-gray-50"><td className="px-6 py-4 font-medium">{player.name}</td><td className="px-6 py-4"><span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">{player.position}</span></td><td className="px-6 py-4">{player.age}</td><td className="px-6 py-4"><span className="font-semibold text-teal-600">{player.rating}</span></td><td className="px-6 py-4">{formatCurrency(player.value)}</td><td className="px-6 py-4">{inSquad ? (<span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-medium">In Squad</span>) : (<span className="text-gray-600">{player.club}</span>)}</td><td className="px-6 py-4">{inSquad ? (<button onClick={() => handleSell(player)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Sell</button>) : (<button onClick={() => handleBuy(player)} disabled={balance < player.value} className={`px-4 py-2 rounded-lg transition-colors ${balance >= player.value ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>Buy</button>)}</td></tr>); })}</tbody></table></div></div>)}{activeTab === 'transfers' && (<div><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">Transfer Market</h2><div className="flex gap-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Search players..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64" /></div><select value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg"><option value="all">All Positions</option><option value="GK">Goalkeeper</option><option value="CB">Center Back</option><option value="LB">Left Back</option><option value="RB">Right Back</option><option value="CM">Center Mid</option><option value="CAM">Attacking Mid</option><option value="LW">Left Wing</option><option value="RW">Right Wing</option><option value="ST">Striker</option></select></div></div><div className="bg-white rounded-lg shadow overflow-x-auto"><table className="w-full"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Position</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Age</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rating</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Value</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Current Club</th><th className="px-6 py-3"></th></tr></thead><tbody className="divide-y divide-gray-200">{filteredMarket.map(player => (<tr key={player.id} className="hover:bg-gray-50"><td className="px-6 py-4 font-medium">{player.name}</td><td className="px-6 py-4"><span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">{player.position}</span></td><td className="px-6 py-4">{player.age}</td><td className="px-6 py-4"><span className="font-semibold text-teal-600">{player.rating}</span></td><td className="px-6 py-4 font-semibold">{formatCurrency(player.value)}</td><td className="px-6 py-4 text-gray-600">{player.club}</td><td className="px-6 py-4"><button onClick={() => handleBuy(player)} disabled={balance < player.value} className={`px-4 py-2 rounded-lg transition-colors ${balance >= player.value ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>{balance >= player.value ? 'Buy' : 'Cannot Afford'}</button></td></tr>))}</tbody></table></div></div>)}{activeTab === 'inbox' && (<div><h2 className="text-2xl font-bold mb-6">Transaction History</h2><div className="space-y-4">{transactions.length === 0 ? (<div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">No transactions yet</div>) : (transactions.map((transaction, index) => (<div key={index} className="bg-white rounded-lg shadow p-6"><div className="flex justify-between items-start"><div><h3 className="font-semibold text-lg">{transaction.type === 'buy' ? '✅ Player Signed' : '💰 Player Sold'}</h3><p className="text-gray-600 mt-1">{transaction.player} - {formatCurrency(transaction.amount)}</p><p className="text-sm text-gray-500 mt-2">{new Date(transaction.timestamp).toLocaleString()}</p></div><span className={`px-3 py-1 rounded text-sm font-medium ${transaction.type === 'buy' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>{transaction.type === 'buy' ? 'Purchase' : 'Sale'}</span></div></div>)))}</div></div>)}</main>{showModal && selectedPlayer && (<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"><div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"><h3 className="text-xl font-bold mb-4">{modalType === 'buy' ? 'Confirm Purchase' : 'Confirm Sale'}</h3><div className="space-y-3 mb-6"><div className="flex justify-between"><span className="text-gray-600">Player:</span><span className="font-semibold">{selectedPlayer.name}</span></div><div className="flex justify-between"><span className="text-gray-600">Position:</span><span className="font-semibold">{selectedPlayer.position}</span></div><div className="flex justify-between"><span className="text-gray-600">Age:</span><span className="font-semibold">{selectedPlayer.age}</span></div><div className="flex justify-between"><span className="text-gray-600">Rating:</span><span className="font-semibold">{selectedPlayer.rating}</span></div><div className="flex justify-between"><span className="text-gray-600">{modalType === 'buy' ? 'Transfer Fee:' : 'Sale Price:'}</span><span className="font-bold text-lg">{formatCurrency(selectedPlayer.value)}</span></div>{modalType === 'buy' && (<><div className="flex justify-between"><span className="text-gray-600">Current Balance:</span><span className="font-semibold">{formatCurrency(balance)}</span></div><div className="flex justify-between"><span className="text-gray-600">Balance After:</span><span className={`font-semibold ${balance - selectedPlayer.value < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(balance - selectedPlayer.value)}</span></div></>)}{modalType === 'sell' && (<div className="flex justify-between"><span className="text-gray-600">Balance After:</span><span className="font-semibold text-green-600">{formatCurrency(balance + selectedPlayer.value)}</span></div>)}</div><div className="flex gap-3"><button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button><button onClick={modalType === 'buy' ? confirmBuy : confirmSell} disabled={modalType === 'buy' && balance < selectedPlayer.value} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${modalType === 'buy' && balance < selectedPlayer.value ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : modalType === 'buy' ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}>Confirm</button></div></div></div>)}</div>);
+
+      // Calculate total weekly wage bill
+      const calculateWeeklyWages = () => {
+        return squad.reduce((total, player) => total + player.wage, 0);
+      };
+
+      // Timer for weekly wages
+      useEffect(() => {
+        const timer = setInterval(() => {
+          setSecondsUntilPayment(prev => {
+            if (prev <= 1) {
+              // Pay wages
+              const totalWages = calculateWeeklyWages();
+              setBalance(prevBalance => prevBalance - totalWages);
+              setCurrentWeek(prevWeek => prevWeek + 1);
+              showToast(`Week ${currentWeek + 1}: Paid £${(totalWages / 1000).toFixed(0)}k in wages`, 'info');
+              return 60;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [squad, currentWeek]);
+
+      const showToast = (message, type = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+      };
+
+      const formatCurrency = (amount) => {
+        return `£${(amount / 1000000).toFixed(1)}M`;
+      };
+
+      const formatWage = (wage) => {
+        return `£${(wage / 1000).toFixed(0)}k/wk`;
+      };
+
+      const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+          direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+      };
+
+      const generatePlayerStats = (player) => {
+        const baseRating = player.rating;
+        const seed = player.id * 137;
+        const random = (min, max, offset = 0) => min + ((seed + offset) % (max - min + 1));
+
+        const positionBonuses = {
+          GK: { technical: -10, physical: 5 },
+          CB: { technical: -5, physical: 10 },
+          LB: { physical: 5 },
+          RB: { physical: 5 },
+          CM: { mental: 5 },
+          CAM: { technical: 10, mental: 5 },
+          LW: { technical: 10, physical: 5 },
+          RW: { technical: 10, physical: 5 },
+          ST: { technical: 5, physical: 5 }
+        };
+
+        const bonus = positionBonuses[player.position] || {};
+
+        const generateAttr = (category, offset) => {
+          const base = baseRating + (bonus[category] || 0);
+          return Math.min(99, Math.max(40, base + random(-10, 10, offset)));
+        };
+
+        const gameRatings = Array.from({ length: 10 }, (_, i) => {
+          return Math.min(10, Math.max(5, baseRating / 10 + random(-15, 15, i * 17) / 10));
+        });
+
+        const inSquad = squad.some(p => p.id === player.id);
+
+        return {
+          ...player,
+          jerseyNumber: random(1, 99, 1),
+          nationality: ['England', 'Spain', 'Brazil', 'Germany', 'France', 'Italy', 'Argentina', 'Portugal', 'Netherlands', 'Belgium'][random(0, 9, 2)],
+          seasonStats: {
+            gamesPlayed: inSquad ? random(15, 38, 3) : random(10, 35, 3),
+            gamesStarted: inSquad ? random(10, 30, 4) : random(5, 25, 4),
+            minutesPlayed: inSquad ? random(1000, 3200, 5) : random(500, 2800, 5),
+            goals: ['ST', 'LW', 'RW', 'CAM'].includes(player.position) ? random(3, 18, 6) : random(0, 5, 6),
+            assists: ['CAM', 'CM', 'LW', 'RW'].includes(player.position) ? random(2, 12, 7) : random(0, 4, 7),
+            cleanSheets: ['GK', 'CB', 'LB', 'RB'].includes(player.position) ? random(5, 15, 8) : 0,
+            yellowCards: random(1, 8, 9),
+            redCards: random(0, 2, 10),
+            averageRating: (gameRatings.reduce((a, b) => a + b, 0) / 10).toFixed(1)
+          },
+          attributes: {
+            technical: {
+              passing: generateAttr('technical', 11),
+              shooting: generateAttr('technical', 12),
+              dribbling: generateAttr('technical', 13),
+              firstTouch: generateAttr('technical', 14)
+            },
+            mental: {
+              vision: generateAttr('mental', 15),
+              decisionMaking: generateAttr('mental', 16),
+              composure: generateAttr('mental', 17),
+              workRate: generateAttr('mental', 18)
+            },
+            physical: {
+              pace: generateAttr('physical', 19),
+              stamina: generateAttr('physical', 20),
+              strength: generateAttr('physical', 21),
+              jumping: generateAttr('physical', 22)
+            }
+          },
+          gameRatings: gameRatings
+        };
+      };
+
+      const handlePlayerClick = (player) => {
+        const fullStats = generatePlayerStats(player);
+        setStatsPlayer(fullStats);
+        setShowStatsModal(true);
+      };
+
+      const sortedSquad = [...squad].sort((a, b) => {
+        if (sortConfig.key) {
+          const aVal = a[sortConfig.key];
+          const bVal = b[sortConfig.key];
+          if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+
+      const filteredSquad = sortedSquad.filter(player => {
+        const matchesPosition = positionFilter === 'all' || player.position === positionFilter;
+        return matchesPosition;
+      });
+
+      const filteredMarket = market.filter(player => {
+        const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesPosition = positionFilter === 'all' || player.position === positionFilter;
+        return matchesSearch && matchesPosition;
+      });
+
+      const handleSell = (player) => {
+        setSelectedPlayer(player);
+        setModalType('sell');
+        setShowModal(true);
+      };
+
+      const handleBuy = (player) => {
+        setSelectedPlayer(player);
+        setModalType('buy');
+        setShowModal(true);
+      };
+
+      const confirmSell = () => {
+        const newSquad = squad.filter(p => p.id !== selectedPlayer.id);
+        setSquad(newSquad);
+        setBalance(balance + selectedPlayer.value);
+        const transaction = {
+          type: 'sell',
+          player: selectedPlayer.name,
+          amount: selectedPlayer.value,
+          timestamp: new Date().toISOString()
+        };
+        setTransactions([transaction, ...transactions]);
+        setMarket([...market, { ...selectedPlayer, club: 'Free Agent' }]);
+        showToast(`Sold ${selectedPlayer.name} for ${formatCurrency(selectedPlayer.value)}`, 'success');
+        setShowModal(false);
+      };
+
+      const confirmBuy = () => {
+        if (balance >= selectedPlayer.value) {
+          const newPlayer = {
+            ...selectedPlayer
+          };
+          setSquad([...squad, newPlayer]);
+          setBalance(balance - selectedPlayer.value);
+          const transaction = {
+            type: 'buy',
+            player: selectedPlayer.name,
+            amount: selectedPlayer.value,
+            timestamp: new Date().toISOString()
+          };
+          setTransactions([transaction, ...transactions]);
+          setMarket(market.filter(p => p.id !== selectedPlayer.id));
+          showToast(`Signed ${selectedPlayer.name} for ${formatCurrency(selectedPlayer.value)}`, 'success');
+          setShowModal(false);
+        } else {
+          showToast('Insufficient funds!', 'error');
+        }
+      };
+
+      const currentWageBill = calculateWeeklyWages();
+      const newWageBillAfterBuy = selectedPlayer && modalType === 'buy' ? currentWageBill + selectedPlayer.wage : currentWageBill;
+      const newWageBillAfterSell = selectedPlayer && modalType === 'sell' ? currentWageBill - selectedPlayer.wage : currentWageBill;
+
+      return (
+        <div className="min-h-screen bg-[#FAF9F6] text-[#2C3E50]">
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translateY(20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            .animate-fadeIn {
+              animation: fadeIn 0.2s ease-out;
+            }
+            .animate-slideUp {
+              animation: slideUp 0.3s ease-out;
+            }
+          `}</style>
+
+          {toast && (
+            <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+              toast.type === 'success' ? 'bg-green-600' :
+              toast.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            } text-white flex items-center gap-2`}>
+              {toast.type === 'success' && <Check size={20} />}
+              {toast.type === 'error' && <AlertCircle size={20} />}
+              <span>{toast.message}</span>
+            </div>
+          )}
+
+          <header className="bg-white shadow-sm border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center text-white font-bold">FC</div>
+                  <div>
+                    <h1 className="text-xl font-bold">FC United</h1>
+                    <p className="text-sm text-gray-600">Manager: Alex Ferguson</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Balance</p>
+                    <p className={`text-2xl font-bold ${balance < 10000000 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatCurrency(balance)}
+                    </p>
+                  </div>
+
+                  <div className="text-right border-l pl-6">
+                    <p className="text-sm text-gray-600">Week {currentWeek}</p>
+                    <p className="text-sm text-gray-500">Next payment in {secondsUntilPayment}s</p>
+                    <p className="text-lg font-bold text-red-600 mt-1">
+                      {formatWage(currentWageBill)}
+                    </p>
+                    <p className="text-xs text-gray-500">Weekly Wage Bill</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <nav className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="flex gap-1">
+                {[
+                  { id: 'squad', label: 'Squad', icon: Users },
+                  { id: 'players', label: 'All Players', icon: Users },
+                  { id: 'transfers', label: 'Transfer Market', icon: TrendingUp },
+                  { id: 'inbox', label: 'Inbox', icon: Mail },
+                ].map(tab => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-teal-600 text-teal-600 bg-teal-50'
+                          : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </nav>
+
+          <main className="max-w-7xl mx-auto px-4 py-6">
+            {activeTab === 'squad' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">Your Squad</h2>
+                  <select
+                    value={positionFilter}
+                    onChange={(e) => setPositionFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="all">All Positions</option>
+                    <option value="GK">Goalkeeper</option>
+                    <option value="CB">Center Back</option>
+                    <option value="LB">Left Back</option>
+                    <option value="RB">Right Back</option>
+                    <option value="CM">Center Mid</option>
+                    <option value="CAM">Attacking Mid</option>
+                    <option value="LW">Left Wing</option>
+                    <option value="RW">Right Wing</option>
+                    <option value="ST">Striker</option>
+                  </select>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        {['name', 'position', 'age', 'rating', 'value', 'wage'].map(key => (
+                          <th
+                            key={key}
+                            onClick={() => handleSort(key)}
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                          >
+                            {key.charAt(0).toUpperCase() + key.slice(1)}
+                          </th>
+                        ))}
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Form</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ownership</th>
+                        <th className="px-6 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredSquad.map(player => (
+                        <tr key={player.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium">
+                            <button
+                              onClick={() => handlePlayerClick(player)}
+                              className="text-teal-600 hover:text-teal-800 hover:underline text-left"
+                            >
+                              {player.name}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">
+                              {player.position}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">{player.age}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-semibold text-teal-600">{player.rating}</span>
+                          </td>
+                          <td className="px-6 py-4">{formatCurrency(player.value)}</td>
+                          <td className="px-6 py-4 text-red-600 font-semibold">{formatWage(player.wage)}</td>
+                          <td className="px-6 py-4" style={{ width: '120px' }}>
+                            <FormBar formRatings={player.form} />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-medium">{player.ownership}%</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleSell(player)}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                              Sell
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'players' && (
+              <div>
+                <h2 className="text-2xl font-bold mb-6">All Players Database</h2>
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Position</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Age</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rating</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Value</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Wage</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Form</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ownership</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
+                        <th className="px-6 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {[...squad, ...market].map(player => {
+                        const inSquad = squad.some(p => p.id === player.id);
+                        return (
+                          <tr key={player.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 font-medium">
+                              <button
+                                onClick={() => handlePlayerClick(player)}
+                                className="text-teal-600 hover:text-teal-800 hover:underline text-left"
+                              >
+                                {player.name}
+                              </button>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">
+                                {player.position}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">{player.age}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-semibold text-teal-600">{player.rating}</span>
+                            </td>
+                            <td className="px-6 py-4">{formatCurrency(player.value)}</td>
+                            <td className="px-6 py-4 text-red-600 font-semibold">{formatWage(player.wage)}</td>
+                            <td className="px-6 py-4" style={{ width: '120px' }}>
+                              <FormBar formRatings={player.form} />
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="text-sm font-medium">{player.ownership}%</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              {inSquad ? (
+                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-medium">
+                                  In Squad
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">{player.club}</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              {inSquad ? (
+                                <button
+                                  onClick={() => handleSell(player)}
+                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                >
+                                  Sell
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleBuy(player)}
+                                  disabled={balance < player.value}
+                                  className={`px-4 py-2 rounded-lg transition-colors ${
+                                    balance >= player.value
+                                      ? 'bg-green-600 text-white hover:bg-green-700'
+                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  Buy
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'transfers' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">Transfer Market</h2>
+                  <div className="flex gap-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        placeholder="Search players..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64"
+                      />
+                    </div>
+                    <select
+                      value={positionFilter}
+                      onChange={(e) => setPositionFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="all">All Positions</option>
+                      <option value="GK">Goalkeeper</option>
+                      <option value="CB">Center Back</option>
+                      <option value="LB">Left Back</option>
+                      <option value="RB">Right Back</option>
+                      <option value="CM">Center Mid</option>
+                      <option value="CAM">Attacking Mid</option>
+                      <option value="LW">Left Wing</option>
+                      <option value="RW">Right Wing</option>
+                      <option value="ST">Striker</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Position</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Age</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rating</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Value</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Wage</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Form</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Ownership</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Current Club</th>
+                        <th className="px-6 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredMarket.map(player => (
+                        <tr key={player.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium">
+                            <button
+                              onClick={() => handlePlayerClick(player)}
+                              className="text-teal-600 hover:text-teal-800 hover:underline text-left"
+                            >
+                              {player.name}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-teal-100 text-teal-800 rounded text-sm">
+                              {player.position}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">{player.age}</td>
+                          <td className="px-6 py-4">
+                            <span className="font-semibold text-teal-600">{player.rating}</span>
+                          </td>
+                          <td className="px-6 py-4 font-semibold">{formatCurrency(player.value)}</td>
+                          <td className="px-6 py-4 text-red-600 font-semibold">{formatWage(player.wage)}</td>
+                          <td className="px-6 py-4" style={{ width: '120px' }}>
+                            <FormBar formRatings={player.form} />
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="text-sm font-medium">{player.ownership}%</span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">{player.club}</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleBuy(player)}
+                              disabled={balance < player.value}
+                              className={`px-4 py-2 rounded-lg transition-colors ${
+                                balance >= player.value
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {balance >= player.value ? 'Buy' : 'Cannot Afford'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'inbox' && (
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Transaction History</h2>
+                <div className="space-y-4">
+                  {transactions.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                      No transactions yet
+                    </div>
+                  ) : (
+                    transactions.map((transaction, index) => (
+                      <div key={index} className="bg-white rounded-lg shadow p-6">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-lg">
+                              {transaction.type === 'buy' ? '✅ Player Signed' : '💰 Player Sold'}
+                            </h3>
+                            <p className="text-gray-600 mt-1">
+                              {transaction.player} - {formatCurrency(transaction.amount)}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              {new Date(transaction.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded text-sm font-medium ${
+                            transaction.type === 'buy'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {transaction.type === 'buy' ? 'Purchase' : 'Sale'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </main>
+
+          {showModal && selectedPlayer && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <h3 className="text-xl font-bold mb-4">
+                  {modalType === 'buy' ? 'Confirm Purchase' : 'Confirm Sale'}
+                </h3>
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Player:</span>
+                    <span className="font-semibold">{selectedPlayer.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Position:</span>
+                    <span className="font-semibold">{selectedPlayer.position}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Age:</span>
+                    <span className="font-semibold">{selectedPlayer.age}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Rating:</span>
+                    <span className="font-semibold">{selectedPlayer.rating}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Weekly Wage:</span>
+                    <span className="font-semibold text-red-600">{formatWage(selectedPlayer.wage)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-3">
+                    <span className="text-gray-600">
+                      {modalType === 'buy' ? 'Transfer Fee:' : 'Sale Price:'}
+                    </span>
+                    <span className="font-bold text-lg">{formatCurrency(selectedPlayer.value)}</span>
+                  </div>
+                  {modalType === 'buy' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Current Balance:</span>
+                        <span className="font-semibold">{formatCurrency(balance)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Balance After:</span>
+                        <span className={`font-semibold ${
+                          balance - selectedPlayer.value < 0 ? 'text-red-600' : 'text-green-600'
+                        }`}>
+                          {formatCurrency(balance - selectedPlayer.value)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between bg-red-50 p-2 rounded">
+                        <span className="text-gray-700 font-medium">New Weekly Wage Bill:</span>
+                        <span className="font-bold text-red-600">{formatWage(newWageBillAfterBuy)}</span>
+                      </div>
+                    </>
+                  )}
+                  {modalType === 'sell' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Balance After:</span>
+                        <span className="font-semibold text-green-600">
+                          {formatCurrency(balance + selectedPlayer.value)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between bg-green-50 p-2 rounded">
+                        <span className="text-gray-700 font-medium">Wage Savings:</span>
+                        <span className="font-bold text-green-600">{formatWage(selectedPlayer.wage)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={modalType === 'buy' ? confirmBuy : confirmSell}
+                    disabled={modalType === 'buy' && balance < selectedPlayer.value}
+                    className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                      modalType === 'buy' && balance < selectedPlayer.value
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : modalType === 'buy'
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-red-600 text-white hover:bg-red-700'
+                    }`}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showStatsModal && statsPlayer && (
+            <PlayerStatsModal
+              player={statsPlayer}
+              onClose={() => setShowStatsModal(false)}
+              onBuy={handleBuy}
+              onSell={handleSell}
+              balance={balance}
+              isInSquad={squad.some(p => p.id === statsPlayer.id)}
+            />
+          )}
+        </div>
+      );
     };
+
     ReactDOM.render(<FootballManager />, document.getElementById('root'));
   </script>
 </body>
